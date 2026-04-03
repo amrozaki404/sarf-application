@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "420777617459",
+    "project_id": "sarf-54738",
+    "storage_bucket": "sarf-54738.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420777617459:android:073297912e0266af8d1b46",
+        "android_client_info": {
+          "package_name": "com.sarf.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420777617459-eg0hobfbhvu6l69vl3m4jsdrtd42ctbh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sarf.app",
+            "certificate_hash": "1e3897dedb17f4a13a941d7cccc5c9a3b03a9763"
+          }
+        },
+        {
+          "client_id": "420777617459-lneria769dsqa4kki1otargoicfga2d6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sarf.app",
+            "certificate_hash": "f544df216c9fea212c97f4f39678e3f3292c4cf4"
+          }
+        },
+        {
+          "client_id": "420777617459-17g6ee7fgh72ce0ao6ifkf2bq26ce7c5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwXKAr6S-ZTjrPSrOkktmg3MvOcS_1cZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420777617459-17g6ee7fgh72ce0ao6ifkf2bq26ce7c5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "420777617459-hm17fe5024ond2apc77nnq9tcob0ljlc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sarf.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

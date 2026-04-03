@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "420777617459",
+    "project_id": "sarf-54738",
+    "storage_bucket": "sarf-54738.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420777617459:android:073297912e0266af8d1b46",
+        "android_client_info": {
+          "package_name": "com.sarf.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwXKAr6S-ZTjrPSrOkktmg3MvOcS_1cZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
