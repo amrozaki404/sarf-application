@@ -1,8 +1,6 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_flag_helper.dart';
 import '../../core/widgets/app_button.dart';
@@ -23,6 +21,7 @@ class P2PExchangePage extends StatefulWidget {
   @override
   State<P2PExchangePage> createState() => _P2PExchangePageState();
 }
+
 
 class _P2PExchangePageState extends State<P2PExchangePage> {
   bool _loading = false;
