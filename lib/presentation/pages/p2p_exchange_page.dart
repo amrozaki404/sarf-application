@@ -204,7 +204,7 @@ class _P2PExchangePageState extends State<P2PExchangePage> {
               icon: const Icon(Icons.receipt_long_rounded),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => P2PHistoryPage(orders: _orders),
+                  builder: (_) => const P2PHistoryPage(),
                 ),
               ),
             ),

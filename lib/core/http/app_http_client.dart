@@ -170,6 +170,29 @@ class AppHttpClient {
     }
   }
 
+  static Future<http.Response> patch(String url) async {
+    try {
+      final headers = await _buildHeaders();
+      final start = DateTime.now();
+      final response = await _client
+          .patch(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      _logToAlice(
+        method: 'PATCH',
+        url: url,
+        headers: headers,
+        body: null,
+        response: response,
+        durationMs: DateTime.now().difference(start).inMilliseconds,
+      );
+      await _intercept(response);
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   static Future<http.Response> get(String url) async {
     try {
       final headers = await _buildHeaders();

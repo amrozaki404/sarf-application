@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_models.dart';
+import '../../data/models/international_transfer_models.dart' show TransferService;
 import '../../data/services/auth_service.dart';
+import '../../data/services/international_transfer_service.dart';
 import '../../data/services/notification_service.dart';
-import '../../data/services/p2p_service.dart';
 import '../pages/notifications_page.dart';
-import '../pages/p2p_history_page.dart';
+import '../pages/international_transfer_page.dart';
 import '../pages/p2p_exchange_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,58 +20,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   static const Color _brandBlue = AppColors.primary;
   static const Color _brandBlueDark = AppColors.primaryDark;
-  static const Color _brandGreen = AppColors.secondary;
   static const Color _surfaceBorder = Color(0xFFE7E9EF);
 
-  static const List<_TransactionItem> _transactions = [
-    _TransactionItem(
-      title: 'International transfer',
-      titleAr: 'حوالة دولية',
-      logoUrl:
-          'https://play-lh.googleusercontent.com/WEI7eaROMpsxYSAWCLGhmJdlTiw94MiS57vpHHOQmBShd25mOi22x6ImBkb3bNiFL7Y=w240-h480-rw',
-      time: 'Today, 08:45 PM',
-      timeAr: 'اليوم، 08:45 م',
-      amount: '+1,250',
-      amountColor: Color(0xFF067647),
-      status: 'Completed',
-      statusAr: 'مكتملة',
-      statusIcon: Icons.check_rounded,
-      statusColor: Color(0xFF067647),
-      statusBackground: Color(0xFFECFDF3),
-    ),
-    _TransactionItem(
-      title: 'Local transfer',
-      titleAr: 'تحويل محلي',
-      logoUrl:
-          'https://play-lh.googleusercontent.com/6ycub52gYLRnYtuE0t-1UC4KsHGaXR84ol0RoezDg7U_ZFkSmSrtig9170O1TXZJQg=w240-h480-rw',
-      time: 'Today, 06:10 PM',
-      timeAr: 'اليوم، 06:10 م',
-      amount: '450,000',
-      amountColor: Color(0xFF101828),
-      status: 'Pending',
-      statusAr: 'قيد التنفيذ',
-      statusIcon: Icons.schedule_rounded,
-      statusColor: Color(0xFF175CD3),
-      statusBackground: Color(0xFFEFF8FF),
-    ),
-    _TransactionItem(
-      title: 'International transfer',
-      titleAr: 'حوالة دولية',
-      logoUrl:
-          'https://scontent.fcai20-6.fna.fbcdn.net/v/t39.30808-6/462913065_554762910465058_8315845462438786345_n.jpg',
-      time: 'Yesterday, 11:30 AM',
-      timeAr: 'أمس، 11:30 ص',
-      amount: '+320',
-      amountColor: Color(0xFF101828),
-      status: 'In review',
-      statusAr: 'قيد المراجعة',
-      statusIcon: Icons.hourglass_top_rounded,
-      statusColor: Color(0xFFB54708),
-      statusBackground: Color(0xFFFFFAEB),
-    ),
-  ];
-
   AuthData? _user;
+  int _unreadCount = 0;
+  List<TransferService> _services = [];
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
@@ -79,7 +33,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait([_loadUser(), _loadHomeData()]);
   }
 
   Future<void> _loadUser() async {
@@ -88,18 +46,57 @@ class _HomePageState extends State<HomePage> {
     setState(() => _user = user);
   }
 
-  Future<void> _openTransfer(String serviceCode) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => P2PExchangePage(initialServiceCode: serviceCode),
-      ),
-    );
+  Future<void> _loadHomeData() async {
+    final results = await Future.wait([
+      NotificationService.getUnreadCount(),
+      InternationalTransferService.getServices(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _unreadCount = results[0] as int;
+      _services = results[1] as List<TransferService>;
+    });
   }
 
-  Future<void> _openTransactionHistory() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const P2PHistoryPage(),
+  Future<void> _openService(TransferService service) async {
+    switch (service.routeType) {
+      case 'INTERNATIONAL_TRANSFER':
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const InternationalTransferPage(),
+          ),
+        );
+        break;
+      case 'LOCAL_TRANSFER':
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => P2PExchangePage(initialServiceCode: service.code),
+          ),
+        );
+        break;
+      case 'GIFT_CARD':
+        // TODO: navigate to GiftCardPage when implemented
+        _showComingSoon(service.name);
+        break;
+      case 'COMING_SOON':
+      default:
+        _showComingSoon(service.name);
+        break;
+    }
+  }
+
+  void _showComingSoon(String serviceName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _t(
+            '$serviceName — Coming soon!',
+            '$serviceName — قريباً!',
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
     );
   }
@@ -110,6 +107,29 @@ class _HomePageState extends State<HomePage> {
         builder: (_) => const NotificationsPage(),
       ),
     );
+    // Refresh badge after returning
+    final count = await NotificationService.getUnreadCount();
+    if (mounted) setState(() => _unreadCount = count);
+  }
+
+  IconData _serviceIcon(String code) {
+    final c = code.toUpperCase();
+    if (c.contains('INTL') || c.contains('INTERNATIONAL')) {
+      return Icons.currency_exchange_rounded;
+    }
+    if (c.contains('LOCAL')) return Icons.compare_arrows_rounded;
+    return Icons.swap_horiz_rounded;
+  }
+
+  String _serviceSubtitle(String code) {
+    final c = code.toUpperCase();
+    if (c.contains('INTL') || c.contains('INTERNATIONAL')) {
+      return _t('Receive international transfers', 'استلام الحوالات الدولية');
+    }
+    if (c.contains('LOCAL')) {
+      return _t('Banks & Wallets transfer', 'تحويل بين البنوك والمحافظ');
+    }
+    return '';
   }
 
   @override
@@ -125,49 +145,36 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: RefreshIndicator(
           color: _brandBlue,
-          onRefresh: _loadUser,
+          onRefresh: _loadAll,
           child: ListView(
-            physics: const BouncingScrollPhysics(),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 120),
             children: [
               _buildTopBar(avatarText),
               const SizedBox(height: 20),
               _buildSectionTitle(),
               const SizedBox(height: 14),
-              _ServiceCard(
-                title: P2PService.titleFor(
-                  P2PService.serviceInternationalTransfer,
-                  isArabic: _isArabic,
-                ),
-                subtitle: _t(
-                  'Receive international transfers',
-                  'استلام الحوالات الدولية',
-                ),
-                icon: Icons.currency_exchange_rounded,
-                onTap: () =>
-                    _openTransfer(P2PService.serviceInternationalTransfer),
-                isArabic: _isArabic,
-                blue: _brandBlue,
-                blueDark: _brandBlueDark,
-              ),
-              const SizedBox(height: 10),
-              _ServiceCard(
-                title: P2PService.titleFor(
-                  P2PService.serviceLocalTransfer,
-                  isArabic: _isArabic,
-                ),
-                subtitle: _t(
-                  'Banks & Wallets transfer',
-                  'تحويل بين البنوك والمحافظ',
-                ),
-                icon: Icons.compare_arrows_rounded,
-                onTap: () => _openTransfer(P2PService.serviceLocalTransfer),
-                isArabic: _isArabic,
-                blue: _brandBlue,
-                blueDark: _brandBlueDark,
-              ),
-              const SizedBox(height: 18),
-              _buildLastTransactionsSection(),
+              ..._services.asMap().entries.map((entry) {
+                final service = entry.value;
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: entry.key == _services.length - 1 ? 0 : 10,
+                  ),
+                  child: _ServiceCard(
+                    title: service.name,
+                    subtitle: service.description?.isNotEmpty == true
+                        ? service.description!
+                        : _serviceSubtitle(service.code),
+                    icon: _serviceIcon(service.code),
+                    onTap: () => _openService(service),
+                    isArabic: _isArabic,
+                    blue: _brandBlue,
+                    blueDark: _brandBlueDark,
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -176,7 +183,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTopBar(String avatarText) {
-    final unreadCount = NotificationService.unreadCount;
     return SizedBox(
       height: 64,
       child: Stack(
@@ -187,16 +193,14 @@ class _HomePageState extends State<HomePage> {
             child: _TopCircleButton(
               icon: Icons.notifications_none_rounded,
               onTap: _openNotifications,
-              badgeText: unreadCount > 0 ? '$unreadCount' : null,
+              badgeText: _unreadCount > 0 ? '$_unreadCount' : null,
               foreground: const Color(0xFF6E7688),
               background: Colors.white,
               borderColor: _surfaceBorder,
             ),
           ),
           Center(
-            child: _BrandMark(
-              blue: _brandBlue,
-            ),
+            child: _BrandMark(blue: _brandBlue),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -209,37 +213,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildGreeting(String displayName) {
-    return Column(
-      crossAxisAlignment:
-          _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(
-          _t('Hello, $displayName', 'أهلاً، $displayName'),
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-          style: const TextStyle(
-            color: Color(0xFF101828),
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _t(
-            'Choose the service you want to start now.',
-            'اختر الخدمة التي تريد البدء بها الآن.',
-          ),
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-          style: const TextStyle(
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w600,
-            height: 1.35,
-          ),
-        ),
-      ],
     );
   }
 
@@ -258,110 +231,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLastTransactionsSection() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE8EEF3)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F101828),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment:
-            _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Row(
-            textDirection: _isArabic ? TextDirection.rtl : TextDirection.ltr,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  textDirection:
-                      _isArabic ? TextDirection.rtl : TextDirection.ltr,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE4E7EC)),
-                      ),
-                      child: const Icon(
-                        Icons.receipt_long_rounded,
-                        size: 18,
-                        color: Color(0xFF175CD3),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _t('Last transactions', 'آخر المعاملات'),
-                        textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                        style: const TextStyle(
-                          color: Color(0xFF101828),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: _openTransactionHistory,
-                style: TextButton.styleFrom(
-                  foregroundColor: _brandBlue,
-                  backgroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: Color(0xFFE4E7EC)),
-                  ),
-                ),
-                child: Text(
-                  _t('View all', 'عرض الكل'),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ..._transactions.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index == _transactions.length - 1 ? 0 : 12,
-              ),
-              child: _TransactionTile(
-                item: item,
-                isArabic: _isArabic,
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
 }
+
+// ── Widget helpers ────────────────────────────────────────────────────────────
 
 class _TopCircleButton extends StatelessWidget {
   final IconData? icon;
@@ -438,9 +310,7 @@ class _TopCircleButton extends StatelessWidget {
       ),
     );
 
-    if (onTap == null) {
-      return child;
-    }
+    if (onTap == null) return child;
 
     return Material(
       color: Colors.transparent,
@@ -456,9 +326,7 @@ class _TopCircleButton extends StatelessWidget {
 class _BrandMark extends StatelessWidget {
   final Color blue;
 
-  const _BrandMark({
-    required this.blue,
-  });
+  const _BrandMark({required this.blue});
 
   @override
   Widget build(BuildContext context) {
@@ -466,11 +334,7 @@ class _BrandMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          'assets/images/app_icon.png',
-          width: 36,
-          height: 36,
-        ),
+        Image.asset('assets/images/app_icon.png', width: 36, height: 36),
         const SizedBox(width: 10),
         Column(
           mainAxisSize: MainAxisSize.min,
@@ -478,8 +342,8 @@ class _BrandMark extends StatelessWidget {
           children: [
             Text(
               isArabic ? 'صرف' : 'Sarf',
-              style: TextStyle(
-                color: const Color(0xFF101828),
+              style: const TextStyle(
+                color: Color(0xFF101828),
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
                 height: 1,
@@ -532,11 +396,7 @@ class _ServiceCard extends StatelessWidget {
         color: Colors.white.withOpacity(0.16),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: 22,
-      ),
+      child: Icon(icon, color: Colors.white, size: 22),
     );
     final arrowBadge = Container(
       width: 38,
@@ -588,19 +448,21 @@ class _ServiceCard extends StatelessWidget {
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      textAlign: isArabic ? TextAlign.right : TextAlign.left,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.78),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        height: 1.3,
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        textAlign: isArabic ? TextAlign.right : TextAlign.left,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.78),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -614,221 +476,3 @@ class _ServiceCard extends StatelessWidget {
   }
 }
 
-class _TransactionTile extends StatelessWidget {
-  final _TransactionItem item;
-  final bool isArabic;
-
-  const _TransactionTile({
-    required this.item,
-    required this.isArabic,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE4E7EC)),
-      ),
-      child: Row(
-        textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Align(
-              alignment:
-                  isArabic ? Alignment.centerRight : Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F7FB),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE4E7EC)),
-                    ),
-                    alignment: Alignment.center,
-                    child: ClipOval(
-                      child: _LogoImage(
-                        logoUrl: item.logoUrl,
-                        width: 34,
-                        height: 34,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 160),
-                    child: Column(
-                      crossAxisAlignment: isArabic
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isArabic ? item.titleAr : item.title,
-                          textAlign:
-                              isArabic ? TextAlign.right : TextAlign.left,
-                          style: const TextStyle(
-                            color: Color(0xFF101828),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          isArabic ? item.timeAr : item.time,
-                          textAlign:
-                              isArabic ? TextAlign.right : TextAlign.left,
-                          style: const TextStyle(
-                            color: Color(0xFF667085),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.amount,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      color: item.amountColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      height: 1.05,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: item.statusBackground,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      textDirection: TextDirection.ltr,
-                      children: [
-                        Icon(
-                          item.statusIcon,
-                          size: 12,
-                          color: item.statusColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isArabic ? item.statusAr : item.status,
-                          style: TextStyle(
-                            color: item.statusColor,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TransactionItem {
-  final String title;
-  final String titleAr;
-  final String? logoUrl;
-  final String time;
-  final String timeAr;
-  final String amount;
-  final Color amountColor;
-  final String status;
-  final String statusAr;
-  final IconData statusIcon;
-  final Color statusColor;
-  final Color statusBackground;
-
-  const _TransactionItem({
-    required this.title,
-    required this.titleAr,
-    this.logoUrl,
-    required this.time,
-    required this.timeAr,
-    required this.amount,
-    required this.amountColor,
-    required this.status,
-    required this.statusAr,
-    required this.statusIcon,
-    required this.statusColor,
-    required this.statusBackground,
-  });
-}
-
-class _LogoImage extends StatelessWidget {
-  final String? logoUrl;
-  final double width;
-  final double height;
-  final BoxFit fit;
-
-  const _LogoImage({
-    required this.logoUrl,
-    required this.width,
-    required this.height,
-    this.fit = BoxFit.contain,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fallback = Image.asset(
-      'assets/images/app_icon.png',
-      width: width,
-      height: height,
-      fit: fit,
-    );
-
-    if (logoUrl == null || logoUrl!.trim().isEmpty) {
-      return fallback;
-    }
-
-    return Image.network(
-      logoUrl!,
-      width: width,
-      height: height,
-      fit: fit,
-      errorBuilder: (_, __, ___) => fallback,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) {
-          return child;
-        }
-        return fallback;
-      },
-    );
-  }
-}

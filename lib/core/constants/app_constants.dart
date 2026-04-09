@@ -1,33 +1,37 @@
 class AppConstants {
-  static const String baseUrl = 'https://sdg-exchange-backend.fg-tech.net';
+  // Local dev — physical device must use the host machine's LAN IP
+  static const String baseUrl = 'http://10.222.22.72:4500';
   static const String appVersion = '1.0.0';
 
-  // Auth endpoints
+  // ── Auth ──────────────────────────────────────────────────────────────────
   static const String loginEndpoint = '/api/auth/login';
   static const String googleAuthEndpoint = '/api/auth/google';
 
-  // Registration
+  // ── Registration ──────────────────────────────────────────────────────────
   static const String requestOtpEndpoint = '/api/registration/request-otp';
   static const String confirmOtpEndpoint = '/api/registration/confirm-otp';
   static const String submitEndpoint = '/api/registration/submit';
 
-  // Market endpoints
-  static const String currenciesEndpoint = '/api/price/currencies/v1';
-  static const String ratesEndpoint = '/api/price/market/v1/rates';
-  static const String ratesAllEndpoint = '/api/price/market/v1/rates';
+  // ── Home ──────────────────────────────────────────────────────────────────
+  static const String servicesEndpoint = '/api/home/services';
+  static const String notificationsEndpoint = '/api/home/notifications';
+  static const String notificationCountEndpoint = '/api/home/notifications/count';
+  // mark as read: PATCH $notificationsEndpoint/{id}/read
 
-  // P2P endpoints
-  static const String p2pMethodsEndpoint = '/api/p2p/v1/methods';
-  static const String p2pQuoteEndpoint = '/api/p2p/v1/quote';
-  static const String p2pOrdersEndpoint = '/api/p2p/v1/orders';
-  static const String p2pActiveOrderEndpoint = '/api/p2p/v1/orders/active';
+  // ── International Transfer ────────────────────────────────────────────────
+  static const String exchangesEndpoint = '/api/international/exchanges';
+  // providers:       GET $exchangesEndpoint/{code}/providers
+  // currencies:      GET $exchangesEndpoint/{code}/currencies
+  // receive-methods: GET $exchangesEndpoint/{code}/receive-methods
+  static const String intlRatesEndpoint = '/api/international/rates';
+  static const String intlOrdersEndpoint = '/api/international/orders';
+  // attachments:  POST $intlOrdersEndpoint/{uuid}/attachments
 
-  // Storage
+  // ── Storage keys ──────────────────────────────────────────────────────────
   static const String tokenKey = 'jwt_token';
   static const String userKey = 'user_data';
-  static const String selectedBaseKey = 'selected_base_currency';
 
-  // Response codes
+  // ── Response codes ────────────────────────────────────────────────────────
   static const String successCode = '0';
   static const String otpSentCode = '1';
   static const String phoneExistsCode = '2';
@@ -38,4 +42,9 @@ class AppConstants {
   static const String googleAuthFailedCode = '7';
   static const String googleExistsCode = '8';
   static const String registrationTokenInvalidCode = '9';
+  static const String exchangeNotFoundCode = '11';
+  static const String rateNotFoundCode = '12';
+  static const String orderCreatedCode = '13';
+  static const String orderNotFoundCode = '14';
+  static const String notificationNotFoundCode = '17';
 }

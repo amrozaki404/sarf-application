@@ -189,6 +189,7 @@ class _MorePageState extends State<MorePage> {
   static const Color _rose = Color(0xFFFFF0EC);
 
   AuthData? _user;
+  int _unreadCount = 0;
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
@@ -198,12 +199,19 @@ class _MorePageState extends State<MorePage> {
   void initState() {
     super.initState();
     _loadUser();
+    _loadUnreadCount();
   }
 
   Future<void> _loadUser() async {
     final user = await AuthService.getUser();
     if (!mounted) return;
     setState(() => _user = user);
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = await NotificationService.getUnreadCount();
+    if (!mounted) return;
+    setState(() => _unreadCount = count);
   }
 
   Future<void> _toggleLanguage() async {
@@ -241,6 +249,7 @@ class _MorePageState extends State<MorePage> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const NotificationsPage()),
     );
+    _loadUnreadCount();
   }
 
   void _showAbout() {
@@ -358,8 +367,6 @@ class _MorePageState extends State<MorePage> {
         ? _user!.fullName.trim()
         : _t('Guest', 'المستخدم');
     final avatarText = displayName[0].toUpperCase();
-    final unreadCount = NotificationService.unreadCount;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

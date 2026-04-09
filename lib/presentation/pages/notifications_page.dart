@@ -27,19 +27,24 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   AuthData? _user;
   _NotificationViewTab _selectedTab = _NotificationViewTab.unread;
+  List<AppNotification> _notifications = [];
+  bool _loading = true;
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
   String _t(String en, String ar) => _isArabic ? ar : en;
 
-  List<AppNotificationItem> get _filteredNotifications {
-    return NotificationService.notifications.where(_matchesSelectedTab).toList();
-  }
+  List<AppNotification> get _filteredNotifications =>
+      _notifications.where(_matchesSelectedTab).toList();
+
+  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
+  int get _readCount => _notifications.where((n) => n.isRead).length;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+    _loadNotifications();
   }
 
   Future<void> _loadUser() async {
@@ -48,7 +53,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
     setState(() => _user = user);
   }
 
-  bool _matchesSelectedTab(AppNotificationItem item) {
+  Future<void> _loadNotifications() async {
+    setState(() => _loading = true);
+    final list = await NotificationService.getAll();
+    if (!mounted) return;
+    setState(() {
+      _notifications = list;
+      _loading = false;
+    });
+  }
+
+  bool _matchesSelectedTab(AppNotification item) {
     switch (_selectedTab) {
       case _NotificationViewTab.read:
         return item.isRead;
@@ -57,37 +72,60 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  String _categoryLabel(NotificationCategory category) {
-    switch (category) {
-      case NotificationCategory.transfer:
+  String _categoryLabel(String category) {
+    switch (category.toUpperCase()) {
+      case 'TRANSFER':
         return _t('Transfer', 'التحويلات');
-      case NotificationCategory.account:
+      case 'ACCOUNT':
         return _t('Account', 'الحساب');
-      case NotificationCategory.security:
+      case 'SECURITY':
         return _t('Security', 'الأمان');
-      case NotificationCategory.promotion:
+      case 'PROMOTION':
         return _t('Updates', 'التحديثات');
+      default:
+        return category;
     }
   }
 
-  Color _categoryColor() {
-    return AppColors.primaryDark;
-  }
+  Color _categoryColor() => AppColors.primaryDark;
 
-  Color _categoryBackground() {
-    return AppColors.primary.withOpacity(0.10);
-  }
+  Color _categoryBackground() => AppColors.primary.withOpacity(0.10);
 
-  Future<void> _showDetails(AppNotificationItem item) {
-    final statusLabel = item.isRead ? _t('Read', 'مقروءة') : _t('Unread', 'غير مقروءة');
-    final statusColor = item.isRead
+  Future<void> _showDetails(AppNotification item) async {
+    AppNotification displayItem = item;
+
+    if (!item.isRead) {
+      await NotificationService.markAsRead(item.id);
+      displayItem = AppNotification(
+        id: item.id,
+        category: item.category,
+        title: item.title,
+        content: item.content,
+        isRead: true,
+        createdAt: item.createdAt,
+        readAt: DateTime.now().toIso8601String(),
+      );
+      if (mounted) {
+        setState(() {
+          final idx = _notifications.indexWhere((n) => n.id == item.id);
+          if (idx != -1) _notifications[idx] = displayItem;
+        });
+      }
+    }
+
+    if (!mounted) return;
+
+    final statusLabel = displayItem.isRead
+        ? _t('Read', 'مقروءة')
+        : _t('Unread', 'غير مقروءة');
+    final statusColor = displayItem.isRead
         ? const Color(0xFF667085)
         : const Color(0xFF175CD3);
-    final statusBackground = item.isRead
+    final statusBackground = displayItem.isRead
         ? const Color(0xFFF2F4F7)
         : const Color(0xFFEFF8FF);
 
-    return showModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -130,7 +168,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _isArabic ? item.titleAr : item.title,
+                  displayItem.title,
                   textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                   style: const TextStyle(
                     color: Color(0xFF101828),
@@ -141,7 +179,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _isArabic ? item.timeLabelAr : item.timeLabel,
+                  displayItem.createdAt,
                   textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                   style: const TextStyle(
                     color: Color(0xFF667085),
@@ -151,7 +189,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  _isArabic ? item.contentAr : item.content,
+                  displayItem.content,
                   textAlign: _isArabic ? TextAlign.right : TextAlign.left,
                   style: const TextStyle(
                     color: Color(0xFF344054),
@@ -176,84 +214,64 @@ class _NotificationsPageState extends State<NotificationsPage> {
         : firstName;
     final avatarText = displayName[0].toUpperCase();
     final notifications = _filteredNotifications;
-    final unreadCount = NotificationService.unreadCount;
-    final readCount = NotificationService.readCount;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-          children: [
-            _buildTopBar(avatarText),
-            const SizedBox(height: 14),
-            _buildViewTabs(
-              unreadCount: unreadCount,
-              readCount: readCount,
-            ),
-            const SizedBox(height: 18),
-            if (notifications.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFFE7E9EF)),
-                ),
-                child: Text(
-                  _t(
-                    'No notifications match the selected filters.',
-                    'لا توجد إشعارات تطابق الفلاتر المحددة.',
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+                children: [
+                  _buildTopBar(avatarText),
+                  const SizedBox(height: 14),
+                  _buildViewTabs(
+                    unreadCount: _unreadCount,
+                    readCount: _readCount,
                   ),
-                  textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              )
-            else
-              ...notifications.asMap().entries.map((entry) {
-                final item = entry.value;
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: entry.key == notifications.length - 1 ? 0 : 12,
-                  ),
-                  child: _NotificationCard(
-                    isArabic: _isArabic,
-                    item: item,
-                    categoryLabel: _categoryLabel(item.category),
-                    categoryColor: _categoryColor(),
-                    categoryBackground: _categoryBackground(),
-                    onTap: () => _showDetails(item),
-                  ),
-                );
-              }),
-          ],
-        ),
+                  const SizedBox(height: 18),
+                  if (notifications.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: const Color(0xFFE7E9EF)),
+                      ),
+                      child: Text(
+                        _t(
+                          'No notifications match the selected filters.',
+                          'لا توجد إشعارات تطابق الفلاتر المحددة.',
+                        ),
+                        textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    )
+                  else
+                    ...notifications.asMap().entries.map((entry) {
+                      final item = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom:
+                              entry.key == notifications.length - 1 ? 0 : 12,
+                        ),
+                        child: _NotificationCard(
+                          isArabic: _isArabic,
+                          item: item,
+                          categoryLabel: _categoryLabel(item.category),
+                          categoryColor: _categoryColor(),
+                          categoryBackground: _categoryBackground(),
+                          onTap: () => _showDetails(item),
+                        ),
+                      );
+                    }),
+                ],
+              ),
       ),
-    );
-  }
-
-  Widget _buildHeaderSummary(int unreadCount) {
-    return Column(
-      crossAxisAlignment:
-          _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(
-          _t(
-            '$unreadCount unread notifications',
-            '$unreadCount إشعارات غير مقروءة',
-          ),
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-          style: const TextStyle(
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w700,
-            height: 1.4,
-          ),
-        ),
-      ],
     );
   }
 
@@ -344,7 +362,7 @@ enum _NotificationViewTab { unread, read }
 
 class _NotificationCard extends StatelessWidget {
   final bool isArabic;
-  final AppNotificationItem item;
+  final AppNotification item;
   final String categoryLabel;
   final Color categoryColor;
   final Color categoryBackground;
@@ -361,13 +379,6 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel =
-        item.isRead ? (isArabic ? 'مقروءة' : 'Read') : (isArabic ? 'غير مقروءة' : 'Unread');
-    final statusColor =
-        item.isRead ? const Color(0xFF667085) : const Color(0xFF175CD3);
-    final statusBackground =
-        item.isRead ? const Color(0xFFF2F4F7) : const Color(0xFFEFF8FF);
-
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(22),
@@ -397,7 +408,7 @@ class _NotificationCard extends StatelessWidget {
                 isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               Text(
-                isArabic ? item.titleAr : item.title,
+                item.title,
                 textAlign: isArabic ? TextAlign.right : TextAlign.left,
                 style: const TextStyle(
                   color: Color(0xFF101828),
@@ -408,7 +419,7 @@ class _NotificationCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                isArabic ? item.contentAr : item.content,
+                item.content,
                 textAlign: isArabic ? TextAlign.right : TextAlign.left,
                 style: const TextStyle(
                   color: Color(0xFF475467),
@@ -419,7 +430,7 @@ class _NotificationCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                isArabic ? item.timeLabelAr : item.timeLabel,
+                item.createdAt,
                 textAlign: isArabic ? TextAlign.right : TextAlign.left,
                 style: const TextStyle(
                   color: Color(0xFF667085),
@@ -470,8 +481,7 @@ class _NotificationTabButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
-            textDirection:
-                Directionality.of(context),
+            textDirection: Directionality.of(context),
             children: [
               Flexible(
                 child: Text(
