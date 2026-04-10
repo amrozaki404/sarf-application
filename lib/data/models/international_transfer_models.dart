@@ -194,12 +194,13 @@ class IntlOrderRequest {
     required this.destinationAccountHolder,
   });
 
-  Map<String, dynamic> toJson() => {
+  Map<String, String> toFormFields() => {
         'exchangeCode': exchangeCode,
         'providerCode': providerCode,
-        if (providerReference != null) 'providerReference': providerReference,
+        if (providerReference != null && providerReference!.isNotEmpty)
+          'providerReference': providerReference!,
         'sendCurrencyCode': sendCurrencyCode,
-        'sendAmount': sendAmount,
+        'sendAmount': sendAmount.toStringAsFixed(2),
         'senderName': senderName,
         'receiverName': receiverName,
         'receiveMethodCode': receiveMethodCode,

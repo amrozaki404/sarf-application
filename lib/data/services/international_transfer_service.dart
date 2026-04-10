@@ -65,7 +65,7 @@ class InternationalTransferService {
     return null;
   }
 
-  // ── Create order (with optional KYC file in same request) ────────────────
+  // ── Create order (multipart/form-data — fields + optional KYC file) ───────
 
   static Future<IntlOrder?> createOrder(
     IntlOrderRequest request, {
@@ -75,23 +75,8 @@ class InternationalTransferService {
         '${AppConstants.baseUrl}${AppConstants.intlOrdersEndpoint}');
 
     final multipart = await AppHttpClient.multipart(uri);
+    multipart.fields.addAll(request.toFormFields());
 
-    // Order fields
-    multipart.fields.addAll({
-      'exchangeCode': request.exchangeCode,
-      'providerCode': request.providerCode,
-      if (request.providerReference != null)
-        'providerReference': request.providerReference!,
-      'sendCurrencyCode': request.sendCurrencyCode,
-      'sendAmount': request.sendAmount.toString(),
-      'senderName': request.senderName,
-      'receiverName': request.receiverName,
-      'receiveMethodCode': request.receiveMethodCode,
-      'destinationAccountNumber': request.destinationAccountNumber,
-      'destinationAccountHolder': request.destinationAccountHolder,
-    });
-
-    // Optional KYC file
     if (file != null) {
       multipart.files.add(await http.MultipartFile.fromPath('file', file.path));
     }
