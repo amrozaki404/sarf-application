@@ -65,12 +65,39 @@ class InternationalTransferService {
     return null;
   }
 
-  // ── Create order ──────────────────────────────────────────────────────────
+  // ── Create order (with optional KYC file in same request) ────────────────
 
-  static Future<IntlOrder?> createOrder(IntlOrderRequest request) async {
-    final url =
-        '${AppConstants.baseUrl}${AppConstants.intlOrdersEndpoint}';
-    final response = await AppHttpClient.post(url, body: request.toJson());
+  static Future<IntlOrder?> createOrder(
+    IntlOrderRequest request, {
+    File? file,
+  }) async {
+    final uri = Uri.parse(
+        '${AppConstants.baseUrl}${AppConstants.intlOrdersEndpoint}');
+
+    final multipart = await AppHttpClient.multipart(uri);
+
+    // Order fields
+    multipart.fields.addAll({
+      'exchangeCode': request.exchangeCode,
+      'providerCode': request.providerCode,
+      if (request.providerReference != null)
+        'providerReference': request.providerReference!,
+      'sendCurrencyCode': request.sendCurrencyCode,
+      'sendAmount': request.sendAmount.toString(),
+      'senderName': request.senderName,
+      'receiverName': request.receiverName,
+      'receiveMethodCode': request.receiveMethodCode,
+      'destinationAccountNumber': request.destinationAccountNumber,
+      'destinationAccountHolder': request.destinationAccountHolder,
+    });
+
+    // Optional KYC file
+    if (file != null) {
+      multipart.files.add(await http.MultipartFile.fromPath('file', file.path));
+    }
+
+    final streamed = await multipart.send();
+    final response = await http.Response.fromStream(streamed);
     final json = jsonDecode(response.body) as Map<String, dynamic>;
 
     if (json['responseCode'] == AppConstants.successCode ||
@@ -94,27 +121,6 @@ class InternationalTransferService {
           .toList();
     }
     return [];
-  }
-
-  // ── Upload attachment (KYC / receipt) ─────────────────────────────────────
-
-  static Future<bool> uploadAttachment({
-    required String uuid,
-    required String kind,
-    required File file,
-  }) async {
-    final uri = Uri.parse(
-        '${AppConstants.baseUrl}${AppConstants.intlOrdersEndpoint}/$uuid/attachments');
-
-    final request = await AppHttpClient.multipart(uri);
-    request.fields['kind'] = kind;
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
-
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
-
-    return json['responseCode'] == AppConstants.successCode;
   }
 
   // ── Currencies available for an exchange ──────────────────────────────────

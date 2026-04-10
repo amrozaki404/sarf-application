@@ -351,6 +351,7 @@ class _InternationalTransferPageState
           destinationAccountNumber: _accountCtrl.text.trim(),
           destinationAccountHolder: _holderCtrl.text.trim(),
         ),
+        file: _kycFile,
       );
 
       if (order == null) {
@@ -360,15 +361,6 @@ class _InternationalTransferPageState
             'Failed to submit. Please try again.',
             'فشل الإرسال. حاول مرة أخرى.'));
         return;
-      }
-
-      // Upload KYC document if provided
-      if (_kycFile != null) {
-        await InternationalTransferService.uploadAttachment(
-          uuid: order.uuid,
-          kind: 'KYC_DOCUMENT',
-          file: _kycFile!,
-        );
       }
 
       if (!mounted) return;
