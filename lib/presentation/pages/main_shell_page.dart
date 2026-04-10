@@ -12,7 +12,7 @@ import '../auth/login_page.dart';
 import '../home/home_page.dart';
 import '../home/wallet_page.dart';
 import 'notifications_page.dart';
-import 'p2p_history_page.dart';
+import 'transactions_page.dart';
 
 class MainShellPage extends StatefulWidget {
   const MainShellPage({super.key});
@@ -60,8 +60,8 @@ class _MainShellPageState extends State<MainShellPage> {
 
   late final List<Widget Function()> _pageBuilders = [
     () => HomePage(key: ValueKey('home-${LocaleService.locale.languageCode}')),
-    () => P2PHistoryPage(
-          key: ValueKey('history-${LocaleService.locale.languageCode}'),
+    () => TransactionsPage(
+          key: ValueKey('transactions-${LocaleService.locale.languageCode}'),
         ),
     () => MorePage(key: ValueKey('more-${LocaleService.locale.languageCode}')),
   ];

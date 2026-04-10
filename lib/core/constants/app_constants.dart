@@ -1,6 +1,6 @@
 class AppConstants {
   // Local dev — physical device must use the host machine's LAN IP
-  static const String baseUrl = 'http://10.222.22.72:4500';
+  static const String baseUrl = 'http://10.102.228.102:4500';
   static const String appVersion = '1.0.0';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ class AppConstants {
   static const String servicesEndpoint = '/api/home/services';
   static const String notificationsEndpoint = '/api/home/notifications';
   static const String notificationCountEndpoint = '/api/home/notifications/count';
+  static const String transactionsEndpoint = '/api/home/transactions';
   // mark as read: PATCH $notificationsEndpoint/{id}/read
 
   // ── International Transfer ────────────────────────────────────────────────

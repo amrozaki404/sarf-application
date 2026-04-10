@@ -112,15 +112,6 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() => _unreadCount = count);
   }
 
-  IconData _serviceIcon(String code) {
-    final c = code.toUpperCase();
-    if (c.contains('INTL') || c.contains('INTERNATIONAL')) {
-      return Icons.currency_exchange_rounded;
-    }
-    if (c.contains('LOCAL')) return Icons.compare_arrows_rounded;
-    return Icons.swap_horiz_rounded;
-  }
-
   String _serviceSubtitle(String code) {
     final c = code.toUpperCase();
     if (c.contains('INTL') || c.contains('INTERNATIONAL')) {
@@ -167,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                     subtitle: service.description?.isNotEmpty == true
                         ? service.description!
                         : _serviceSubtitle(service.code),
-                    icon: _serviceIcon(service.code),
+                    logoUrl: service.logoUrl,
                     onTap: () => _openService(service),
                     isArabic: _isArabic,
                     blue: _brandBlue,
@@ -369,7 +360,7 @@ class _BrandMark extends StatelessWidget {
 class _ServiceCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String? logoUrl;
   final VoidCallback onTap;
   final bool isArabic;
   final Color blue;
@@ -378,7 +369,7 @@ class _ServiceCard extends StatelessWidget {
   const _ServiceCard({
     required this.title,
     required this.subtitle,
-    required this.icon,
+    this.logoUrl,
     required this.onTap,
     required this.isArabic,
     required this.blue,
@@ -387,25 +378,48 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final arrow =
-        isArabic ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
-    final serviceIcon = Container(
-      width: 42,
-      height: 42,
+    final logoWidget = Container(
+      width: 52,
+      height: 52,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.16),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Icon(icon, color: Colors.white, size: 22),
-    );
-    final arrowBadge = Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(arrow, color: Colors.white, size: 22),
+      clipBehavior: Clip.antiAlias,
+      child: logoUrl != null && logoUrl!.isNotEmpty
+          ? Image.network(
+              logoUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.swap_horiz_rounded,
+                color: Color(0xFF1A56DB),
+                size: 26,
+              ),
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF1A56DB),
+                        ),
+                      ),
+                    ),
+            )
+          : const Icon(
+              Icons.swap_horiz_rounded,
+              color: Color(0xFF1A56DB),
+              size: 26,
+            ),
     );
 
     return Material(
@@ -414,7 +428,7 @@ class _ServiceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [blue, blueDark],
@@ -432,11 +446,11 @@ class _ServiceCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (isArabic) arrowBadge else serviceIcon,
-              const SizedBox(width: 16),
+              logoWidget,
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
@@ -453,21 +467,19 @@ class _ServiceCard extends StatelessWidget {
                       Text(
                         subtitle,
                         textAlign: isArabic ? TextAlign.right : TextAlign.left,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.78),
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              if (isArabic) serviceIcon else arrowBadge,
             ],
           ),
         ),

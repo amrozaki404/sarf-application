@@ -75,6 +75,10 @@ class _InternationalTransferPageState
   Timer? _rateTimer;
   String? _rateError;
 
+  // Step 1 — Focus nodes
+  final _amountFocusNode = FocusNode();
+  final _referenceFocusNode = FocusNode();
+
   // Step 2 — KYC
   final _senderCtrl = TextEditingController();
   final _receiverCtrl = TextEditingController();
@@ -100,6 +104,8 @@ class _InternationalTransferPageState
     super.initState();
     _loadExchanges();
     _amountCtrl.addListener(_onAmountTyped);
+    _amountFocusNode.addListener(() => setState(() {}));
+    _referenceFocusNode.addListener(() => setState(() {}));
   }
 
   @override
@@ -113,6 +119,8 @@ class _InternationalTransferPageState
     _receiverCtrl.dispose();
     _accountCtrl.dispose();
     _holderCtrl.dispose();
+    _amountFocusNode.dispose();
+    _referenceFocusNode.dispose();
     super.dispose();
   }
 
@@ -120,7 +128,7 @@ class _InternationalTransferPageState
 
   void _onAmountTyped() {
     _formatAmount();
-    _scheduleRateFetch();
+    setState(() {});
   }
 
   void _formatAmount() {
@@ -648,118 +656,280 @@ class _InternationalTransferPageState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Reference field ─────────────────────────────────────────
         if (showRef) ...[
-          _SectionLabel(
-            icon: Icons.receipt_long_rounded,
-            label: refLabel,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _referenceCtrl,
-            keyboardType: (provider?.fieldType == 'number')
-                ? TextInputType.number
-                : TextInputType.text,
-            decoration: InputDecoration(
-              hintText: refHint.isNotEmpty
-                  ? refHint
-                  : _t('Enter reference number', 'أدخل رقم المرجع'),
-            ),
-          ),
-          const SizedBox(height: 14),
-        ],
-        _SectionLabel(
-          icon: Icons.payments_outlined,
-          label: _t('Amount', 'المبلغ'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _amountCtrl,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: _t('Enter amount', 'أدخل المبلغ'),
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 14),
-        _SectionLabel(
-          icon: Icons.attach_money_rounded,
-          label: _t('Currency', 'العملة'),
-        ),
-        const SizedBox(height: 8),
-        _loadingCurrencies
-            ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            : _IntlSelectorField(
-                title: _sendCurrency.isEmpty
-                    ? _t('Choose currency', 'اختر العملة')
-                    : (_selectedCurrency?.name(_isAr) ?? _sendCurrency),
-                isArabic: _isAr,
-                leading: _CurrencyBadge(currency: _sendCurrency.isEmpty ? null : _sendCurrency),
-                onTap: _currencies.isEmpty ? null : _openCurrencyPicker,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: _referenceFocusNode.hasFocus
+                    ? AppColors.exchangeDark
+                    : AppColors.borderSoft,
+                width: _referenceFocusNode.hasFocus ? 1.5 : 1,
               ),
-        const SizedBox(height: 16),
-        if (_fetchingRate)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(strokeWidth: 2),
+              boxShadow: AppShadows.card,
             ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    refLabel,
+                    style: TextStyle(
+                      color: _referenceFocusNode.hasFocus
+                          ? AppColors.exchangeDark
+                          : AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _referenceCtrl,
+                    focusNode: _referenceFocusNode,
+                    keyboardType: (provider?.fieldType == 'number')
+                        ? TextInputType.number
+                        : TextInputType.text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: refHint.isNotEmpty
+                          ? refHint
+                          : _t('Enter value', 'أدخل القيمة'),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── Amount + Currency card ──────────────────────────────────
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: _amountFocusNode.hasFocus
+                  ? AppColors.exchangeDark
+                  : AppColors.borderSoft,
+              width: _amountFocusNode.hasFocus ? 1.5 : 1,
+            ),
+            boxShadow: AppShadows.card,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _t('Send amount', 'مبلغ الإرسال'),
+                      style: TextStyle(
+                        color: _amountFocusNode.hasFocus
+                            ? AppColors.exchangeDark
+                            : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _amountCtrl,
+                      focusNode: _amountFocusNode,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                        height: 1.1,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        hintStyle: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textHint,
+                          height: 1.1,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        filled: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(
+                height: 1,
+                color: _amountFocusNode.hasFocus
+                    ? AppColors.exchangeDark.withOpacity(0.2)
+                    : AppColors.borderSoft,
+              ),
+              _loadingCurrencies
+                  ? const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  : InkWell(
+                      onTap: _currencies.isEmpty ? null : _openCurrencyPicker,
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(18)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            _CurrencyBadge(
+                                currency: _sendCurrency.isEmpty
+                                    ? null
+                                    : _sendCurrency),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _sendCurrency.isEmpty
+                                    ? _t('Choose currency', 'اختر العملة')
+                                    : (_selectedCurrency?.name(_isAr) ??
+                                        _sendCurrency),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  color: _sendCurrency.isEmpty
+                                      ? AppColors.textHint
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.keyboard_arrow_down_rounded,
+                                color: AppColors.textSecondary, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+
+        // ── Rate result ─────────────────────────────────────────────
+        const SizedBox(height: 12),
+        if (_fetchingRate)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: AppShadows.card,
+            ),
+            child:
+                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
           )
         else if (_rateError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              _rateError!,
-              style: const TextStyle(
-                  color: AppColors.error, fontWeight: FontWeight.w700),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.error.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    color: AppColors.error, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _rateError!,
+                    style: const TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
+                  ),
+                ),
+              ],
             ),
           )
         else if (rate != null)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.inputFill,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.inputBorder),
+              border: Border.all(color: AppColors.borderSoft),
+              boxShadow: AppShadows.card,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _t('Exchange calculation', 'حساب التحويل'),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _KeyValueRow(
-                  label: _t('Desk rate', 'سعر الصرافة'),
-                  value:
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.exchangeDark.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
                       '1 $_sendCurrency = ${_fmtAmount(rate.rate)} ${rate.receiveCurrencyCode}',
-                ),
-                _KeyValueRow(
-                  label: _t('Estimated payout', 'الصرف المتوقع'),
-                  value: receiveAmount == null
-                      ? '--'
-                      : '${_fmtAmount(receiveAmount)} ${rate.receiveCurrencyCode}',
-                ),
-                if (rate.minAmount != null || rate.maxAmount != null)
-                  _KeyValueRow(
-                    label: _t('Limits', 'الحدود'),
-                    value: [
-                      if (rate.minAmount != null)
-                        '${_t('Min', 'أدنى')}: ${_fmtAmount(rate.minAmount!)}',
-                      if (rate.maxAmount != null)
-                        '${_t('Max', 'أقصى')}: ${_fmtAmount(rate.maxAmount!)}',
-                    ].join('  ·  '),
+                      style: const TextStyle(
+                        color: AppColors.exchangeDark,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
+                ),
+                const Divider(height: 1, color: AppColors.borderSoft),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _t('Estimated payout', 'الصرف المتوقع'),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        receiveAmount == null
+                            ? '--'
+                            : '${_fmtAmount(receiveAmount)} ${rate.receiveCurrencyCode}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

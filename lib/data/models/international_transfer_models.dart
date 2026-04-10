@@ -141,8 +141,6 @@ class RateInfo {
   final String sendCurrencyCode;
   final String receiveCurrencyCode;
   final double rate;
-  final double? minAmount;
-  final double? maxAmount;
   final String? noteEn;
   final String? noteAr;
   final double? estimatedReceiveAmount;
@@ -151,8 +149,6 @@ class RateInfo {
     required this.sendCurrencyCode,
     required this.receiveCurrencyCode,
     required this.rate,
-    this.minAmount,
-    this.maxAmount,
     this.noteEn,
     this.noteAr,
     this.estimatedReceiveAmount,
@@ -163,8 +159,6 @@ class RateInfo {
       sendCurrencyCode: json['sendCurrencyCode'] as String,
       receiveCurrencyCode: json['receiveCurrencyCode'] as String,
       rate: (json['rate'] as num).toDouble(),
-      minAmount: (json['minAmount'] as num?)?.toDouble(),
-      maxAmount: (json['maxAmount'] as num?)?.toDouble(),
       noteEn: json['noteEn'] as String?,
       noteAr: json['noteAr'] as String?,
       estimatedReceiveAmount:
