@@ -141,33 +141,31 @@ class _SplashRouterState extends State<_SplashRouter>
     if (!mounted) return;
 
     if (loggedIn) {
-      final user = await AuthService.getUser();
+      // If biometric login is enabled, require the user to authenticate before
+      // entering the app. Session validity is determined by the token alone —
+      // the user-data cache is not required here.
+      final biometricEnabled = await BiometricService.isEnabled();
+      final biometricAvailable = await BiometricService.isAvailable();
       if (!mounted) return;
-
-      if (user != null) {
-        // If biometric login is enabled, require the user to authenticate.
-        final biometricEnabled = await BiometricService.isEnabled();
-        final biometricAvailable = await BiometricService.isAvailable();
-        if (biometricEnabled && biometricAvailable) {
-          final authenticated = await BiometricService.authenticate();
-          if (!mounted) return;
-          if (!authenticated) {
-            // Biometric failed or cancelled → fall through to login page.
-            _goToLogin();
-            return;
-          }
+      if (biometricEnabled && biometricAvailable) {
+        final authenticated = await BiometricService.authenticate();
+        if (!mounted) return;
+        if (!authenticated) {
+          // Biometric failed or cancelled → fall through to login page.
+          _goToLogin();
+          return;
         }
-
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, anim, __) => const MainShellPage(),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-        return;
       }
+
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, anim, __) => const MainShellPage(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+      return;
     }
 
     _goToLogin();

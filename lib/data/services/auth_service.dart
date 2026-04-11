@@ -184,6 +184,7 @@ class AuthService {
     await _storage.delete(key: AppConstants.tokenKey);
     await _storage.delete(key: AppConstants.refreshTokenKey);
     await _storage.delete(key: AppConstants.userKey);
+    await _storage.delete(key: AppConstants.biometricEnabledKey);
   }
 
   static Future<Map<String, String>> getAuthHeaders() async {
