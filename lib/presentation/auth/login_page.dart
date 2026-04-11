@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/biometric_service.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/constants/app_constants.dart';
@@ -36,11 +37,30 @@ class _LoginPageState extends State<LoginPage> {
   bool _isGoogleLoading = false;
   String? _errorMessage;
 
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
     serverClientId:
         '420777617459-17g6ee7fgh72ce0ao6ifkf2bq26ce7c5.apps.googleusercontent.com',
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
+    if (!mounted) return;
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+    });
+  }
 
   @override
   void dispose() {
@@ -156,7 +176,12 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _navigateToHome(AuthData user) {
+  Future<void> _navigateToHome(AuthData user) async {
+    // If biometrics is available but the user hasn't opted in yet, offer it.
+    if (_biometricAvailable && !_biometricEnabled) {
+      await _offerEnableBiometric();
+    }
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainShellPage(),
@@ -166,6 +191,41 @@ class _LoginPageState extends State<LoginPage> {
       ),
       (_) => false,
     );
+  }
+
+  Future<void> _offerEnableBiometric() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          _isArabic ? 'تفعيل الدخول البيومتري' : 'Enable Biometric Login',
+          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+        ),
+        content: Text(
+          _isArabic
+              ? 'هل تريد استخدام بصمة الإصبع أو Face ID للدخول بشكل أسرع؟'
+              : 'Would you like to use fingerprint or Face ID for faster sign-in?',
+          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(_isArabic ? 'لاحقاً' : 'Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              _isArabic ? 'تفعيل' : 'Enable',
+              style: const TextStyle(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await BiometricService.setEnabled(true);
+    }
   }
 
   Future<_GoogleSignupDetails?> _collectGoogleDetails(String? email) async {
@@ -480,6 +540,39 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildBottomBiometricArea() {
+    // Hide the button entirely if biometrics is not supported on this device.
+    if (!_biometricAvailable) {
+      return Column(
+        children: [
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              _isArabic
+                  ? 'الإصدار ${AppConstants.appVersion}'
+                  : 'Version ${AppConstants.appVersion}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final label = _biometricEnabled
+        ? (_isArabic ? 'تسجيل الدخول باستخدام البصمة' : 'Sign in with biometrics')
+        : (_isArabic ? 'تفعيل الدخول البيومتري' : 'Enable biometric login');
+    final sublabel = _biometricEnabled
+        ? (_isArabic
+            ? 'استخدم بصمة الجهاز للدخول بشكل أسرع'
+            : 'Use your device biometrics for faster sign in')
+        : (_isArabic
+            ? 'اضغط لتفعيل بصمة الإصبع أو Face ID'
+            : 'Tap to set up fingerprint or Face ID');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -545,9 +638,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _isArabic
-                              ? 'تسجيل الدخول باستخدام البصمة'
-                              : 'Sign in with biometrics',
+                          label,
                           textAlign:
                               _isArabic ? TextAlign.right : TextAlign.left,
                           style: const TextStyle(
@@ -559,9 +650,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _isArabic
-                              ? 'استخدم بصمة الجهاز للدخول بشكل أسرع'
-                              : 'Use your device biometrics for faster sign in',
+                          sublabel,
                           textAlign:
                               _isArabic ? TextAlign.right : TextAlign.left,
                           style: const TextStyle(
@@ -824,17 +913,76 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _showBiometricInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isArabic
-              ? 'سيتم ربط الدخول البيومتري بعد إضافة الخدمة.'
-              : 'Biometric login will be connected once the feature is added.',
+  Future<void> _showBiometricInfo() async {
+    if (!_biometricAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'الجهاز لا يدعم المصادقة البيومترية.'
+                : 'Biometric authentication is not available on this device.',
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
-        behavior: SnackBarBehavior.floating,
-      ),
+      );
+      return;
+    }
+
+    if (!_biometricEnabled) {
+      // Offer to enable biometrics — requires an active session.
+      final hasSession = await AuthService.isLoggedIn();
+      if (!mounted) return;
+      if (!hasSession) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isArabic
+                  ? 'سجّل دخولك أولاً لتفعيل الدخول البيومتري.'
+                  : 'Sign in first to enable biometric login.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      await _offerEnableBiometric();
+      await _loadBiometricState();
+      return;
+    }
+
+    // Biometric is enabled → authenticate now.
+    final authenticated = await BiometricService.authenticate(
+      localizedReason: _isArabic
+          ? 'استخدم بصمتك للدخول إلى حساب Sarf'
+          : 'Use your biometrics to sign in to Sarf',
     );
+    if (!mounted) return;
+    if (authenticated) {
+      final user = await AuthService.getUser();
+      if (!mounted) return;
+      if (user != null) {
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder: (_, anim, __) => const MainShellPage(),
+            transitionsBuilder: (_, anim, __, child) =>
+                FadeTransition(opacity: anim, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+          (_) => false,
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'فشل التحقق البيومتري. حاول مرة أخرى.'
+                : 'Biometric verification failed. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   bool get _isArabic => LocaleService.locale.languageCode == 'ar';

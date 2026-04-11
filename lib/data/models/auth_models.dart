@@ -192,6 +192,7 @@ class ConfirmOtpResponse extends GenericResponse {
 
 class AuthData {
   final String token;
+  final String? refreshToken;
   final String accountNumber;
   final String firstName;
   final String lastName;
@@ -201,6 +202,7 @@ class AuthData {
 
   AuthData({
     required this.token,
+    this.refreshToken,
     required this.accountNumber,
     required this.firstName,
     required this.lastName,
@@ -211,6 +213,7 @@ class AuthData {
 
   factory AuthData.fromJson(Map<String, dynamic> json) => AuthData(
         token: json['token'] ?? '',
+        refreshToken: json['refreshToken'],
         accountNumber: json['accountNumber'] ?? '',
         firstName: json['firstName'] ?? '',
         lastName: json['lastName'] ?? '',
@@ -221,6 +224,7 @@ class AuthData {
 
   Map<String, dynamic> toJson() => {
         'token': token,
+        if (refreshToken != null) 'refreshToken': refreshToken,
         'accountNumber': accountNumber,
         'firstName': firstName,
         'lastName': lastName,

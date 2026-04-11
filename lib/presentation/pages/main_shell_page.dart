@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/localization/locale_service.dart';
+import '../../core/services/biometric_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
@@ -190,6 +191,8 @@ class _MorePageState extends State<MorePage> {
 
   AuthData? _user;
   int _unreadCount = 0;
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
@@ -200,6 +203,23 @@ class _MorePageState extends State<MorePage> {
     super.initState();
     _loadUser();
     _loadUnreadCount();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
+    if (!mounted) return;
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+    });
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    await BiometricService.setEnabled(value);
+    if (!mounted) return;
+    setState(() => _biometricEnabled = value);
   }
 
   Future<void> _loadUser() async {
@@ -392,6 +412,22 @@ class _MorePageState extends State<MorePage> {
               iconColor: _deepNavy,
               iconBackground: const Color(0xFFF2F4F7),
             ),
+            if (_biometricAvailable)
+              _item(
+                Icons.fingerprint_rounded,
+                _t('Biometric Login', 'الدخول البيومتري'),
+                subtitle: _biometricEnabled
+                    ? _t('Enabled', 'مفعّل')
+                    : _t('Disabled', 'معطّل'),
+                onTap: null,
+                iconColor: AppColors.primary,
+                iconBackground: _mistBlue,
+                trailing: Switch(
+                  value: _biometricEnabled,
+                  onChanged: _toggleBiometric,
+                  activeColor: AppColors.primary,
+                ),
+              ),
             _item(
               Icons.logout_rounded,
               _t('Logout', 'تسجيل الخروج'),
@@ -739,7 +775,8 @@ class _MorePageState extends State<MorePage> {
     Color? titleColor,
     Color? trailingColor,
     String? badgeText,
-    required VoidCallback onTap,
+    Widget? trailing,
+    required VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.transparent,
@@ -812,54 +849,57 @@ class _MorePageState extends State<MorePage> {
                   ],
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                textDirection:
-                    _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                children: [
-                  if (badgeText != null) ...[
-                    Container(
-                      constraints: const BoxConstraints(
-                        minWidth: 26,
-                        minHeight: 26,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        badgeText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
+              if (trailing != null)
+                trailing
+              else
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  textDirection:
+                      _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+                  children: [
+                    if (badgeText != null) ...[
+                      Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 26,
+                          minHeight: 26,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          badgeText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                    ],
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _isArabic
+                            ? Icons.chevron_left_rounded
+                            : Icons.chevron_right_rounded,
+                        color: trailingColor ?? AppColors.textHint,
+                        size: 18,
+                      ),
                     ),
-                    const SizedBox(width: 8),
                   ],
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _isArabic
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
-                      color: trailingColor ?? AppColors.textHint,
-                      size: 18,
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
         ),
