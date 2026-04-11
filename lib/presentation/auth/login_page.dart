@@ -397,7 +397,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                _isArabic ? 'Sarf' : 'Exchange & Transfer',
+                _isArabic ? 'Sarf' : 'Pay instantly',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.86),
                   fontSize: 13,
@@ -917,21 +917,8 @@ class _LoginPageState extends State<LoginPage> {
           : 'Use your biometrics to sign in to Sarf',
     );
     if (!mounted) return;
-    if (authenticated) {
-      final user = await AuthService.getUser();
-      if (!mounted) return;
-      if (user != null) {
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            pageBuilder: (_, anim, __) => const MainShellPage(),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-          (_) => false,
-        );
-      }
-    } else {
+
+    if (!authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -942,7 +929,41 @@ class _LoginPageState extends State<LoginPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+      return;
     }
+
+    final user = await AuthService.getUser();
+    if (!mounted) return;
+
+    if (user == null) {
+      // Stored session was cleared (logout / reinstall).
+      // Disable biometrics so the button disappears and ask to re-login.
+      await BiometricService.setEnabled(false);
+      if (!mounted) return;
+      setState(() => _biometricEnabled = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'انتهت جلستك. يرجى تسجيل الدخول بكلمة المرور أولاً.'
+                : 'Your session has expired. Please sign in with your password.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, anim, __) => const MainShellPage(),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+      (_) => false,
+    );
   }
 
   bool get _isArabic => LocaleService.locale.languageCode == 'ar';
