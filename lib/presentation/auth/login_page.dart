@@ -397,7 +397,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                _isArabic ? 'Sarf' : 'Exchange & Transfer',
+                _isArabic ? 'Sarf' : 'Pay instantly',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.86),
                   fontSize: 13,
@@ -958,9 +958,9 @@ class _LoginPageState extends State<LoginPage> {
     );
     if (!mounted) return;
     if (authenticated) {
-      final user = await AuthService.getUser();
+      final hasSession = await AuthService.isLoggedIn();
       if (!mounted) return;
-      if (user != null) {
+      if (hasSession) {
         Navigator.of(context).pushAndRemoveUntil(
           PageRouteBuilder(
             pageBuilder: (_, anim, __) => const MainShellPage(),
@@ -970,6 +970,22 @@ class _LoginPageState extends State<LoginPage> {
           ),
           (_) => false,
         );
+      } else {
+        await BiometricService.setEnabled(false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isArabic
+                  ? 'انتهت جلستك. سجّل دخولك بكلمة المرور أولاً.'
+                  : 'Session expired. Please sign in with your password first.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() {
+          _biometricEnabled = false;
+        });
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
