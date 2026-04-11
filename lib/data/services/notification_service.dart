@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../../core/constants/app_constants.dart';
 import '../../core/http/app_http_client.dart';
 import '../models/notification_models.dart';
@@ -10,7 +9,7 @@ class NotificationService {
     try {
       final url = '${AppConstants.baseUrl}${AppConstants.notificationCountEndpoint}';
       final response = await AppHttpClient.get(url);
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
 
       if (json['responseCode'] == AppConstants.successCode) {
         final data = json['data'] as Map<String, dynamic>;
@@ -28,7 +27,7 @@ class NotificationService {
     try {
       final url = '${AppConstants.baseUrl}${AppConstants.notificationsEndpoint}';
       final response = await AppHttpClient.get(url);
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
 
       if (json['responseCode'] == AppConstants.successCode) {
         final list = json['data'] as List<dynamic>;
@@ -49,7 +48,7 @@ class NotificationService {
       final url =
           '${AppConstants.baseUrl}${AppConstants.notificationsEndpoint}/$id/read';
       final response = await AppHttpClient.patch(url);
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
       return json['responseCode'] == AppConstants.successCode;
     } catch (_) {
       return false;

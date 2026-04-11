@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/http/app_http_client.dart';
@@ -10,7 +9,7 @@ class TransactionService {
       final response = await AppHttpClient.get(
         '${AppConstants.baseUrl}${AppConstants.transactionsEndpoint}',
       );
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
       final data = json['data'] as List<dynamic>?;
       if (data == null) return [];
       return data

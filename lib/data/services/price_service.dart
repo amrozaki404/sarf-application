@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/http/app_http_client.dart';
@@ -18,7 +17,7 @@ class PriceService {
 
       if (response.statusCode != 200) return null;
 
-      final dynamic decodedJson = jsonDecode(response.body);
+      final dynamic decodedJson = AppHttpClient.decodeJsonBody(response);
       if (decodedJson is List) {
         final rates = decodedJson
             .map((e) => RateItem.fromJson(e as Map<String, dynamic>))

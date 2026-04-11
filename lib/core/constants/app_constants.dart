@@ -1,6 +1,6 @@
 class AppConstants {
   // Local dev — physical device must use the host machine's LAN IP
-  static const String baseUrl = 'http://10.102.228.102:4500';
+  static const String baseUrl = 'http://10.102.228.87:4500';
   static const String appVersion = '1.0.0';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -15,7 +15,8 @@ class AppConstants {
   // ── Home ──────────────────────────────────────────────────────────────────
   static const String servicesEndpoint = '/api/home/services';
   static const String notificationsEndpoint = '/api/home/notifications';
-  static const String notificationCountEndpoint = '/api/home/notifications/count';
+  static const String notificationCountEndpoint =
+      '/api/home/notifications/count';
   static const String transactionsEndpoint = '/api/home/transactions';
   // mark as read: PATCH $notificationsEndpoint/{id}/read
 
@@ -27,6 +28,14 @@ class AppConstants {
   static const String intlRatesEndpoint = '/api/international/rates';
   static const String intlOrdersEndpoint = '/api/international/orders';
   // attachments:  POST $intlOrdersEndpoint/{uuid}/attachments
+
+  // ── Gift Card ─────────────────────────────────────────────────────────────
+  static const String giftCardCategoriesEndpoint = '/api/giftcard/categories';
+  // products by category: GET $giftCardCategoriesEndpoint/{categoryId}/products
+  static const String giftCardProductsEndpoint = '/api/giftcard/products';
+  // popular: GET $giftCardProductsEndpoint/popular
+  // single:  GET $giftCardProductsEndpoint/{productId}
+  static const String giftCardOrdersEndpoint = '/api/giftcard/orders';
 
   // ── Storage keys ──────────────────────────────────────────────────────────
   static const String tokenKey = 'jwt_token';
@@ -48,4 +57,9 @@ class AppConstants {
   static const String orderCreatedCode = '13';
   static const String orderNotFoundCode = '14';
   static const String notificationNotFoundCode = '17';
+  static const String giftCardCategoryNotFoundCode = '20';
+  static const String giftCardProductNotFoundCode = '21';
+  static const String giftCardDenominationNotFoundCode = '22';
+  static const String giftCardOrderCreatedCode = '23';
+  static const String giftCardOrderNotFoundCode = '24';
 }

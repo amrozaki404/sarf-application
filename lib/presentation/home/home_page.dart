@@ -8,6 +8,7 @@ import '../../data/services/international_transfer_service.dart';
 import '../../data/services/notification_service.dart';
 import '../pages/notifications_page.dart';
 import '../pages/international_transfer_page.dart';
+import '../pages/gift_card_page.dart';
 import '../pages/p2p_exchange_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -75,8 +76,9 @@ class _HomePageState extends State<HomePage> {
         );
         break;
       case 'GIFT_CARD':
-        // TODO: navigate to GiftCardPage when implemented
-        _showComingSoon(service.name);
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const GiftCardPage()),
+        );
         break;
       case 'COMING_SOON':
       default:
@@ -154,10 +156,17 @@ class _HomePageState extends State<HomePage> {
                     bottom: entry.key == _services.length - 1 ? 0 : 10,
                   ),
                   child: _ServiceCard(
-                    title: service.name,
-                    subtitle: service.description?.isNotEmpty == true
-                        ? service.description!
-                        : _serviceSubtitle(service.code),
+                    title: service.routeType == 'GIFT_CARD'
+                        ? _t('GiftCard', 'بطاقات الهدايا')
+                        : service.name,
+                    subtitle: service.routeType == 'GIFT_CARD'
+                        ? _t(
+                            'Buy digital gift cards instantly',
+                            'اشترِ بطاقات هدايا رقمية فوراً',
+                          )
+                        : service.description?.isNotEmpty == true
+                            ? service.description!
+                            : _serviceSubtitle(service.code),
                     logoUrl: service.logoUrl,
                     onTap: () => _openService(service),
                     isArabic: _isArabic,
@@ -342,7 +351,7 @@ class _BrandMark extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              'Exchange',
+              'Pay & Receive',
               style: TextStyle(
                 color: blue,
                 fontSize: 10,
@@ -487,4 +496,3 @@ class _ServiceCard extends StatelessWidget {
     );
   }
 }
-

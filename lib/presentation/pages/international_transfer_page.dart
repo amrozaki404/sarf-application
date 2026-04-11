@@ -541,17 +541,19 @@ class _InternationalTransferPageState
                   else
                     _buildStepBody(),
                   const SizedBox(height: 18),
-                  if (_currentStep < 4)
-                    AppButton(
-                      label: _t('Continue', 'متابعة'),
-                      onPressed: _continue,
-                    )
-                  else
-                    AppButton(
-                      label: _t('Submit request', 'إرسال الطلب'),
-                      onPressed: _submit,
-                      isLoading: _submitting,
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: _currentStep < 4
+                        ? AppButton(
+                            label: _t('Continue', 'متابعة'),
+                            onPressed: _continue,
+                          )
+                        : AppButton(
+                            label: _t('Submit request', 'إرسال الطلب'),
+                            onPressed: _submit,
+                            isLoading: _submitting,
+                          ),
+                  ),
                 ],
               ),
             ),

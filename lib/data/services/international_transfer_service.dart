@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../core/constants/app_constants.dart';
@@ -11,7 +10,7 @@ class InternationalTransferService {
   static Future<List<ExchangeOption>> getExchanges() async {
     final url = '${AppConstants.baseUrl}${AppConstants.exchangesEndpoint}';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)
@@ -27,7 +26,7 @@ class InternationalTransferService {
     final url =
         '${AppConstants.baseUrl}${AppConstants.exchangesEndpoint}/$exchangeCode/providers';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)
@@ -57,7 +56,7 @@ class InternationalTransferService {
     );
 
     final response = await AppHttpClient.get(uri.toString());
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return RateInfo.fromJson(json['data'] as Map<String, dynamic>);
@@ -83,7 +82,7 @@ class InternationalTransferService {
 
     final streamed = await multipart.send();
     final response = await http.Response.fromStream(streamed);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode ||
         json['responseCode'] == AppConstants.orderCreatedCode) {
@@ -98,7 +97,7 @@ class InternationalTransferService {
     final url =
         '${AppConstants.baseUrl}${AppConstants.intlOrdersEndpoint}';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)
@@ -114,7 +113,7 @@ class InternationalTransferService {
     final url =
         '${AppConstants.baseUrl}${AppConstants.exchangesEndpoint}/$exchangeCode/currencies';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)
@@ -131,7 +130,7 @@ class InternationalTransferService {
     final url =
         '${AppConstants.baseUrl}${AppConstants.exchangesEndpoint}/$exchangeCode/receive-methods';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)
@@ -146,7 +145,7 @@ class InternationalTransferService {
   static Future<List<TransferService>> getServices() async {
     final url = '${AppConstants.baseUrl}${AppConstants.servicesEndpoint}';
     final response = await AppHttpClient.get(url);
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = AppHttpClient.decodeJsonMap(response);
 
     if (json['responseCode'] == AppConstants.successCode) {
       return (json['data'] as List)

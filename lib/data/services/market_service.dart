@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/http/app_http_client.dart';
@@ -16,7 +15,7 @@ class MarketService {
         return [];
       }
 
-      final dynamic decodedJson = jsonDecode(response.body);
+      final dynamic decodedJson = AppHttpClient.decodeJsonBody(response);
 
       if (decodedJson is List) {
         return decodedJson
@@ -48,7 +47,7 @@ class MarketService {
         return [];
       }
 
-      final dynamic decodedJson = jsonDecode(response.body);
+      final dynamic decodedJson = AppHttpClient.decodeJsonBody(response);
 
       if (decodedJson is List) {
         return decodedJson

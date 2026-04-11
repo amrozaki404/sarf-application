@@ -21,8 +21,7 @@ class AuthService {
         '${AppConstants.baseUrl}${AppConstants.requestOtpEndpoint}',
         body: request.toJson(),
       );
-      return GenericResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>);
+      return GenericResponse.fromJson(AppHttpClient.decodeJsonMap(response));
     } catch (e) {
       debugPrint('requestOtp error: $e');
       return GenericResponse(
@@ -40,8 +39,7 @@ class AuthService {
         '${AppConstants.baseUrl}${AppConstants.confirmOtpEndpoint}',
         body: request.toJson(),
       );
-      return ConfirmOtpResponse.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>);
+      return ConfirmOtpResponse.fromJson(AppHttpClient.decodeJsonMap(response));
     } catch (e) {
       debugPrint('confirmOtp error: $e');
       return ConfirmOtpResponse(
@@ -68,7 +66,7 @@ class AuthService {
             )
             .toJson(),
       );
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
       final authResponse = AuthResponse.fromJson(json);
       if (authResponse.responseCode == AppConstants.successCode &&
           authResponse.data != null) {
@@ -101,7 +99,7 @@ class AuthService {
           fcmToken: fcmToken,
         ).toJson(),
       );
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
       final authResponse = AuthResponse.fromJson(json);
       if (authResponse.responseCode == AppConstants.successCode &&
           authResponse.data != null) {
@@ -138,7 +136,7 @@ class AuthService {
           fcmToken: fcmToken,
         ).toJson(),
       );
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = AppHttpClient.decodeJsonMap(response);
       final authResponse = AuthResponse.fromJson(json);
       if (authResponse.responseCode == AppConstants.successCode &&
           authResponse.data != null) {

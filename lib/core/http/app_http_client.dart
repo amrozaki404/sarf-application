@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/models/receipt_models.dart';
 import '../constants/app_constants.dart';
 import '../localization/locale_service.dart';
 import '../services/navigation_service.dart';
@@ -227,12 +228,53 @@ class AppHttpClient {
       });
   }
 
+  static dynamic decodeJsonBody(
+    http.Response response, {
+    bool inspectReceipt = true,
+  }) {
+    final decoded = jsonDecode(response.body);
+    if (inspectReceipt) {
+      inspectDecodedJson(decoded);
+    }
+    return decoded;
+  }
+
+  static void inspectResponseBody(String responseBody) {
+    try {
+      inspectDecodedJson(jsonDecode(responseBody));
+    } catch (_) {}
+  }
+
+  static Map<String, dynamic> decodeJsonMap(
+    http.Response response, {
+    bool inspectReceipt = true,
+  }) {
+    final decoded = decodeJsonBody(
+      response,
+      inspectReceipt: inspectReceipt,
+    );
+    if (decoded is Map<String, dynamic>) return decoded;
+    throw const FormatException('Expected a JSON object response.');
+  }
+
+  static void inspectDecodedJson(dynamic decoded) {
+    if (decoded is! Map<String, dynamic>) return;
+    final receipt = TransactionReceipt.maybeFromJson(decoded['transactionReceipt']);
+    if (receipt != null) {
+      NavigationService.showTransactionReceipt(receipt);
+    }
+  }
+
   // ── Global response interceptor ───────────────────────────────────────────
 
   static Future<void> _intercept(
     http.Response response, {
     bool showValidationDialog = true,
   }) async {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      inspectResponseBody(response.body);
+    }
+
     if (response.statusCode == 401) {
       // Only redirect to login if the user had an active session
       final token = await _storage.read(key: AppConstants.tokenKey);
