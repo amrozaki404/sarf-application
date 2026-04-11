@@ -540,8 +540,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildBottomBiometricArea() {
-    // Hide the button entirely if biometrics is not supported on this device.
-    if (!_biometricAvailable) {
+    // Show the biometric button only when it's available AND the user has
+    // enabled it. Setup is offered after a successful password/Google login.
+    if (!_biometricAvailable || !_biometricEnabled) {
       return Column(
         children: [
           const SizedBox(height: 10),
@@ -562,16 +563,10 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
 
-    final label = _biometricEnabled
-        ? (_isArabic ? 'تسجيل الدخول باستخدام البصمة' : 'Sign in with biometrics')
-        : (_isArabic ? 'تفعيل الدخول البيومتري' : 'Enable biometric login');
-    final sublabel = _biometricEnabled
-        ? (_isArabic
-            ? 'استخدم بصمة الجهاز للدخول بشكل أسرع'
-            : 'Use your device biometrics for faster sign in')
-        : (_isArabic
-            ? 'اضغط لتفعيل بصمة الإصبع أو Face ID'
-            : 'Tap to set up fingerprint or Face ID');
+    const label = 'Sign in with biometrics';
+    const labelAr = 'تسجيل الدخول باستخدام البصمة';
+    const sublabel = 'Use your device biometrics for faster sign in';
+    const sublabelAr = 'استخدم بصمة الجهاز للدخول بشكل أسرع';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -638,7 +633,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          label,
+                          _isArabic ? labelAr : label,
                           textAlign:
                               _isArabic ? TextAlign.right : TextAlign.left,
                           style: const TextStyle(
@@ -650,7 +645,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          sublabel,
+                          _isArabic ? sublabelAr : sublabel,
                           textAlign:
                               _isArabic ? TextAlign.right : TextAlign.left,
                           style: const TextStyle(
@@ -914,43 +909,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _showBiometricInfo() async {
-    if (!_biometricAvailable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isArabic
-                ? 'الجهاز لا يدعم المصادقة البيومترية.'
-                : 'Biometric authentication is not available on this device.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (!_biometricEnabled) {
-      // Offer to enable biometrics — requires an active session.
-      final hasSession = await AuthService.isLoggedIn();
-      if (!mounted) return;
-      if (!hasSession) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isArabic
-                  ? 'سجّل دخولك أولاً لتفعيل الدخول البيومتري.'
-                  : 'Sign in first to enable biometric login.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-      await _offerEnableBiometric();
-      await _loadBiometricState();
-      return;
-    }
-
-    // Biometric is enabled → authenticate now.
+    // Button is only shown when biometrics is available + enabled,
+    // so we go straight to authentication.
     final authenticated = await BiometricService.authenticate(
       localizedReason: _isArabic
           ? 'استخدم بصمتك للدخول إلى حساب Sarf'
