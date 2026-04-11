@@ -37,9 +37,14 @@ class AppConstants {
   // single:  GET $giftCardProductsEndpoint/{productId}
   static const String giftCardOrdersEndpoint = '/api/giftcard/orders';
 
+  // ── Auth token refresh ────────────────────────────────────────────────────
+  static const String refreshTokenEndpoint = '/api/auth/refresh';
+
   // ── Storage keys ──────────────────────────────────────────────────────────
   static const String tokenKey = 'jwt_token';
+  static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'user_data';
+  static const String biometricEnabledKey = 'biometric_enabled';
 
   // ── Response codes ────────────────────────────────────────────────────────
   static const String successCode = '0';

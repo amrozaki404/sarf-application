@@ -155,12 +155,19 @@ class AuthService {
 
   static Future<void> _saveSession(AuthData user) async {
     await _storage.write(key: AppConstants.tokenKey, value: user.token);
+    if (user.refreshToken != null) {
+      await _storage.write(
+          key: AppConstants.refreshTokenKey, value: user.refreshToken!);
+    }
     await _storage.write(
         key: AppConstants.userKey, value: jsonEncode(user.toJson()));
   }
 
   static Future<String?> getToken() =>
       _storage.read(key: AppConstants.tokenKey);
+
+  static Future<String?> getRefreshToken() =>
+      _storage.read(key: AppConstants.refreshTokenKey);
 
   static Future<AuthData?> getUser() async {
     final raw = await _storage.read(key: AppConstants.userKey);
@@ -175,6 +182,7 @@ class AuthService {
 
   static Future<void> logout() async {
     await _storage.delete(key: AppConstants.tokenKey);
+    await _storage.delete(key: AppConstants.refreshTokenKey);
     await _storage.delete(key: AppConstants.userKey);
   }
 

@@ -8,6 +8,8 @@ import 'firebase_options.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/services/navigation_service.dart';
+import 'core/services/biometric_service.dart';
+import 'core/services/permission_service.dart';
 import 'core/localization/locale_service.dart';
 import 'data/services/auth_service.dart';
 import 'presentation/auth/login_page.dart';
@@ -31,6 +33,8 @@ void main() async {
 
   await LocaleService.init();
   await EasyLocalization.ensureInitialized();
+
+  await PermissionService.requestStartupPermissions();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -141,6 +145,19 @@ class _SplashRouterState extends State<_SplashRouter>
       if (!mounted) return;
 
       if (user != null) {
+        // If biometric login is enabled, require the user to authenticate.
+        final biometricEnabled = await BiometricService.isEnabled();
+        final biometricAvailable = await BiometricService.isAvailable();
+        if (biometricEnabled && biometricAvailable) {
+          final authenticated = await BiometricService.authenticate();
+          if (!mounted) return;
+          if (!authenticated) {
+            // Biometric failed or cancelled → fall through to login page.
+            _goToLogin();
+            return;
+          }
+        }
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (_, anim, __) => const MainShellPage(),
@@ -153,6 +170,10 @@ class _SplashRouterState extends State<_SplashRouter>
       }
     }
 
+    _goToLogin();
+  }
+
+  void _goToLogin() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, anim, __) => const LoginPage(),
