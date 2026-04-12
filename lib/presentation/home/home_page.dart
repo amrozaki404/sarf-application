@@ -416,61 +416,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildServiceCards() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.78,
-      ),
-      itemCount: _services.length,
-      itemBuilder: (context, index) {
+    return Column(
+      children: List.generate(_services.length, (index) {
         final service = _services[index];
-        return _ServiceCard(
-          title: _serviceTitle(service),
-          icon: _serviceIcon(service),
-          color: _serviceColor(index),
-          logoUrl: service.logoUrl,
-          onTap: () => _openService(service),
+        return Padding(
+          padding: EdgeInsets.only(bottom: index < _services.length - 1 ? 12 : 0),
+          child: _ServiceCard(
+            title: _serviceTitle(service),
+            icon: _serviceIcon(service),
+            color: _serviceColor(index),
+            logoUrl: service.logoUrl,
+            onTap: () => _openService(service),
+            isArabic: _isArabic,
+          ),
         );
-      },
+      }),
     );
   }
 
   Widget _buildSkeletonGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.78,
-      ),
-      itemCount: 4,
-      itemBuilder: (_, __) => Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8ECF1),
-              borderRadius: BorderRadius.circular(18),
-            ),
+    return Column(
+      children: List.generate(3, (i) => Padding(
+        padding: EdgeInsets.only(bottom: i < 2 ? 12 : 0),
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F4F8),
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 8),
-          Container(
-            width: 40,
-            height: 10,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8ECF1),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-        ],
-      ),
+        ),
+      )),
     );
   }
 }
@@ -583,13 +558,14 @@ class _ActionBarItem extends StatelessWidget {
   }
 }
 
-/// Compact service tile — icon + title only, clean UI
+/// Service row card — soft colored background, gradient icon, title + arrow
 class _ServiceCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color color;
   final String? logoUrl;
   final VoidCallback onTap;
+  final bool isArabic;
 
   const _ServiceCard({
     required this.title,
@@ -597,39 +573,91 @@ class _ServiceCard extends StatelessWidget {
     required this.color,
     this.logoUrl,
     required this.onTap,
+    required this.isArabic,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _buildIcon(),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.10)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF344054),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              height: 1.25,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            textDirection:
+                isArabic ? TextDirection.rtl : TextDirection.ltr,
+            children: [
+              // Gradient icon circle
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withOpacity(0.70)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _buildIcon(),
+              ),
+              const SizedBox(width: 14),
+              // Title
+              Expanded(
+                child: Text(
+                  title,
+                  textAlign: isArabic ? TextAlign.right : TextAlign.left,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF1D2939),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Arrow
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  isArabic
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons.arrow_forward_ios_rounded,
+                  color: color,
+                  size: 14,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -639,21 +667,22 @@ class _ServiceCard extends StatelessWidget {
       return Image.network(
         logoUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 26),
+        errorBuilder: (_, __, ___) =>
+            Icon(icon, color: Colors.white, size: 24),
         loadingBuilder: (_, child, progress) => progress == null
             ? child
-            : Center(
+            : const Center(
                 child: SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: color,
+                    color: Colors.white,
                   ),
                 ),
               ),
       );
     }
-    return Icon(icon, color: color, size: 26);
+    return Icon(icon, color: Colors.white, size: 24);
   }
 }
