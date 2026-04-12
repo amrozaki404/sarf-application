@@ -7,11 +7,12 @@ import '../../data/models/international_transfer_models.dart'
 import '../../data/services/auth_service.dart';
 import '../../data/services/international_transfer_service.dart';
 import '../../data/services/notification_service.dart';
-import '../pages/main_shell_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/international_transfer_page.dart';
 import '../pages/gift_card_page.dart';
+import '../pages/main_shell_page.dart' show MorePage;
 import '../pages/p2p_exchange_page.dart';
+import '../pages/transactions_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -382,12 +383,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openMore() {
-    // Switch to the More tab via the shell
-    MainShellPage.of(context)?.changeTab(2);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MorePage()),
+    );
   }
 
   void _openDeposit() {
-    // Deposit — coming soon
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_t('Deposit — Coming soon!', 'الإيداع — قريباً!')),
@@ -399,8 +400,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openHistory() {
-    // Switch to the History tab via the shell
-    MainShellPage.of(context)?.changeTab(1);
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TransactionsPage()),
+    );
   }
 
   // ── Services Section ───────────────────────────────────────────────────────
