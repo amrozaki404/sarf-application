@@ -70,20 +70,6 @@ class _MainShellPageState extends State<MainShellPage> {
   @override
   Widget build(BuildContext context) {
     final currentIndex = _safeCurrentIndex;
-    final items = [
-      _BottomNavItem(
-        icon: Icons.home_rounded,
-        label: _t('Home', 'الرئيسية'),
-      ),
-      _BottomNavItem(
-        icon: Icons.receipt_long_rounded,
-        label: _t('History', 'السجل'),
-      ),
-      _BottomNavItem(
-        icon: Icons.menu_rounded,
-        label: _t('More', 'المزيد'),
-      ),
-    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -96,83 +82,8 @@ class _MainShellPageState extends State<MainShellPage> {
           return _pageBuilders[index]();
         }),
       ),
-      bottomNavigationBar: Container(
-        height: 86,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0E2B37).withOpacity(0.10),
-              blurRadius: 22,
-              offset: const Offset(0, -6),
-            ),
-          ],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(items.length, (index) {
-            final selected = currentIndex == index;
-            final item = items[index];
-            return Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => changeTab(index),
-                  borderRadius: BorderRadius.circular(18),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    height: 62,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          item.icon,
-                          color: selected
-                              ? AppColors.exchangeDark
-                              : AppColors.textHint,
-                          size: 21,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: selected
-                                ? AppColors.exchangeDark
-                                : AppColors.textSecondary,
-                            fontWeight:
-                                selected ? FontWeight.w800 : FontWeight.w600,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
     );
   }
-}
-
-class _BottomNavItem {
-  final IconData icon;
-  final String label;
-
-  _BottomNavItem({
-    required this.icon,
-    required this.label,
-  });
 }
 
 class MorePage extends StatefulWidget {

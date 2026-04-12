@@ -7,6 +7,7 @@ import '../../data/models/international_transfer_models.dart'
 import '../../data/services/auth_service.dart';
 import '../../data/services/international_transfer_service.dart';
 import '../../data/services/notification_service.dart';
+import '../pages/main_shell_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/international_transfer_page.dart';
 import '../pages/gift_card_page.dart';
@@ -245,6 +246,11 @@ class _HomePageState extends State<HomePage> {
             // ── Balance section ──
             _buildBalanceSection(),
 
+            const SizedBox(height: 24),
+
+            // ── Action bar (More / Deposit / History) ──
+            _buildActionBar(),
+
             const SizedBox(height: 28),
           ],
         ),
@@ -312,6 +318,89 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+
+  /// White rounded action bar with More / Deposit / History
+  Widget _buildActionBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // More
+              Expanded(
+                child: _ActionBarItem(
+                  icon: Icons.more_horiz_rounded,
+                  label: _t('More', 'المزيد'),
+                  onTap: _openMore,
+                ),
+              ),
+              Container(
+                width: 1,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: const Color(0xFFE7E9EF),
+              ),
+              // Deposit
+              Expanded(
+                child: _ActionBarItem(
+                  icon: Icons.add_rounded,
+                  label: _t('Deposit', 'إيداع'),
+                  onTap: _openDeposit,
+                ),
+              ),
+              Container(
+                width: 1,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: const Color(0xFFE7E9EF),
+              ),
+              // History
+              Expanded(
+                child: _ActionBarItem(
+                  icon: Icons.receipt_long_rounded,
+                  label: _t('History', 'السجل'),
+                  onTap: _openHistory,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openMore() {
+    // Switch to the More tab via the shell
+    MainShellPage.of(context)?.changeTab(2);
+  }
+
+  void _openDeposit() {
+    // Deposit — coming soon
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_t('Deposit — Coming soon!', 'الإيداع — قريباً!')),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
+  }
+
+  void _openHistory() {
+    // Switch to the History tab via the shell
+    MainShellPage.of(context)?.changeTab(1);
   }
 
   // ── Services Section ───────────────────────────────────────────────────────
@@ -452,6 +541,44 @@ class _HeaderCircle extends StatelessWidget {
 
     if (onTap == null) return widget;
     return GestureDetector(onTap: onTap, child: widget);
+  }
+}
+
+/// One item inside the white action bar (icon + label, tappable)
+class _ActionBarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionBarItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF101828), size: 24),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF101828),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
