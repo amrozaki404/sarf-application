@@ -1,6 +1,6 @@
 class AppConstants {
   // Local dev — physical device must use the host machine's LAN IP
-  static const String baseUrl = 'http://10.102.228.98:4500';
+  static const String baseUrl = 'http://10.247.233.67:4500';
   static const String appVersion = '1.0.0';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
