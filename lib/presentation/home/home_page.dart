@@ -257,12 +257,6 @@ class _HomePageState extends State<HomePage> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.account_balance_wallet_outlined,
-              color: Colors.white.withOpacity(0.70),
-              size: 16,
-            ),
-            const SizedBox(width: 6),
             Text(
               _t('Total Balance', 'الرصيد الإجمالي'),
               style: TextStyle(
