@@ -23,6 +23,8 @@ class _HomePageState extends State<HomePage> {
   AuthData? _user;
   int _unreadCount = 0;
   List<TransferService> _services = [];
+  double _balance = 0;
+  bool _balanceVisible = true;
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
   String _t(String en, String ar) => _isArabic ? ar : en;
@@ -103,19 +105,6 @@ class _HomePageState extends State<HomePage> {
 
   // ── Service helpers ────────────────────────────────────────────────────────
 
-  String _serviceLabel(TransferService service) {
-    switch (service.routeType) {
-      case 'INTERNATIONAL_TRANSFER':
-        return _t('Send', 'إرسال');
-      case 'LOCAL_TRANSFER':
-        return _t('Local', 'محلي');
-      case 'GIFT_CARD':
-        return _t('Gift Cards', 'هدايا');
-      default:
-        return service.name;
-    }
-  }
-
   String _serviceTitle(TransferService service) {
     if (service.routeType == 'GIFT_CARD') {
       return _t('Gift Cards', 'بطاقات الهدايا');
@@ -136,19 +125,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  IconData _actionBarIcon(TransferService service) {
-    switch (service.routeType) {
-      case 'INTERNATIONAL_TRANSFER':
-        return Icons.swap_horiz_rounded;
-      case 'LOCAL_TRANSFER':
-        return Icons.add;
-      case 'GIFT_CARD':
-        return Icons.card_giftcard_rounded;
-      default:
-        return Icons.more_horiz;
-    }
-  }
-
   Color _serviceColor(int index) {
     const colors = [
       Color(0xFF006BFF), // brand blue
@@ -166,10 +142,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final firstName = _user?.firstName.trim();
-    final displayName = (firstName == null || firstName.isEmpty)
-        ? _t('Guest', 'المستخدم')
-        : firstName;
-    final avatarText = displayName[0].toUpperCase();
+    final initial = (firstName != null && firstName.isNotEmpty)
+        ? firstName[0].toUpperCase()
+        : (_isArabic ? 'م' : 'G');
+    final avatarText = initial;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
@@ -182,7 +158,7 @@ class _HomePageState extends State<HomePage> {
           ),
           padding: EdgeInsets.zero,
           children: [
-            _buildHeader(displayName, avatarText),
+            _buildHeader(avatarText),
             const SizedBox(height: 28),
             _buildServicesSection(),
             const SizedBox(height: 120),
@@ -194,7 +170,7 @@ class _HomePageState extends State<HomePage> {
 
   // ── Dark Header ────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(String displayName, String avatarText) {
+  Widget _buildHeader(String avatarText) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -250,86 +226,83 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            const SizedBox(height: 30),
-
-            // ── Welcome + name ──
-            Column(
-              children: [
-                Text(
-                  _t('Welcome back,', 'مرحباً بعودتك،'),
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.65),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ),
-
             const SizedBox(height: 28),
 
-            // ── White action bar ──
-            if (_services.isNotEmpty) _buildActionBar(),
+            // ── Balance section ──
+            _buildBalanceSection(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
           ],
         ),
       ),
     );
   }
 
-  /// White rounded bar with up to 3 quick-action buttons separated by dividers
-  Widget _buildActionBar() {
-    final items = _services.take(3).toList();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+  /// Balance display with show/hide toggle — matches screenshot design
+  Widget _buildBalanceSection() {
+    // Format balance: show as integer if whole, otherwise 2 decimals
+    final balanceText = _balance == _balance.truncateToDouble()
+        ? _balance.toInt().toString().replaceAllMapped(
+              RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+              (m) => '${m[1]},',
+            )
+        : _balance.toStringAsFixed(2).replaceAllMapped(
+              RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+              (m) => '${m[1]},',
+            );
+
+    return Column(
+      children: [
+        // Label row with wallet icon
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.account_balance_wallet_outlined,
+              color: Colors.white.withOpacity(0.70),
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _t('Total Balance', 'الرصيد الإجمالي'),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.70),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: List.generate(items.length * 2 - 1, (i) {
-              // odd indices = dividers
-              if (i.isOdd) {
-                return Container(
-                  width: 1,
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  color: const Color(0xFFE7E9EF),
-                );
-              }
-              final idx = i ~/ 2;
-              final service = items[idx];
-              return Expanded(
-                child: _ActionBarItem(
-                  icon: _actionBarIcon(service),
-                  label: _serviceLabel(service),
-                  onTap: () => _openService(service),
-                ),
-              );
-            }),
-          ),
+        const SizedBox(height: 10),
+        // Balance number + eye toggle
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              _balanceVisible ? balanceText : '••••••',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                height: 1.1,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => setState(() => _balanceVisible = !_balanceVisible),
+              child: Icon(
+                _balanceVisible
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                color: Colors.white.withOpacity(0.60),
+                size: 22,
+              ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 
@@ -481,44 +454,6 @@ class _HeaderCircle extends StatelessWidget {
 
     if (onTap == null) return widget;
     return GestureDetector(onTap: onTap, child: widget);
-  }
-}
-
-/// One item inside the white quick-action bar (icon + label, tappable)
-class _ActionBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionBarItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: const Color(0xFF101828), size: 24),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF101828),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
