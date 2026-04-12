@@ -294,66 +294,63 @@ class _MorePageState extends State<MorePage> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = (_user?.fullName.trim().isNotEmpty ?? false)
-        ? _user!.fullName.trim()
-        : _t('Guest', 'المستخدم');
-    final avatarText = displayName[0].toUpperCase();
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-          children: [
-            _buildTopBar(avatarText),
-            const SizedBox(height: 22),
-            _item(
-              Icons.language_rounded,
-              _t('Language', 'اللغة'),
-              subtitle: LocaleService.isArabic ? 'English' : 'العربية',
-              onTap: _toggleLanguage,
-              iconColor: _softBlue,
-              iconBackground: _mistBlue,
-            ),
-            _item(
-              Icons.person_outline_rounded,
-              _t('Account', 'الحساب'),
-              subtitle: _user?.fullName,
-              onTap: _openAccount,
-              iconColor: _deepNavy,
-              iconBackground: const Color(0xFFF2F4F7),
-            ),
-            if (_biometricAvailable)
-              _item(
-                Icons.fingerprint_rounded,
-                _t('Biometric Login', 'الدخول البيومتري'),
-                subtitle: _biometricEnabled
-                    ? _t('Enabled', 'مفعّل')
-                    : _t('Disabled', 'معطّل'),
-                onTap: null,
-                iconColor: AppColors.primary,
-                iconBackground: _mistBlue,
-                trailing: Switch(
-                  value: _biometricEnabled,
-                  onChanged: _toggleBiometric,
-                  activeColor: AppColors.primary,
-                ),
-              ),
-            _item(
-              Icons.logout_rounded,
-              _t('Logout', 'تسجيل الخروج'),
-              subtitle: _t(
-                'Sign out from your account on this device',
-                'تسجيل الخروج من حسابك على هذا الجهاز',
-              ),
-              onTap: _logout,
-              iconColor: const Color(0xFFD92D20),
-              iconBackground: _rose,
-              titleColor: const Color(0xFFD92D20),
-              trailingColor: const Color(0xFFD92D20),
-            ),
-          ],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(
+            _isArabic ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
+        title: Text(
+          _t('More', 'المزيد'),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+        children: [
+          _item(
+            Icons.language_rounded,
+            _t('Language', 'اللغة'),
+            subtitle: LocaleService.isArabic ? 'English' : 'العربية',
+            onTap: _toggleLanguage,
+            iconColor: _softBlue,
+            iconBackground: _mistBlue,
+          ),
+          _item(
+            Icons.person_outline_rounded,
+            _t('Account', 'الحساب'),
+            subtitle: _user?.fullName,
+            onTap: _openAccount,
+            iconColor: _deepNavy,
+            iconBackground: const Color(0xFFF2F4F7),
+          ),
+          _item(
+            Icons.logout_rounded,
+            _t('Logout', 'تسجيل الخروج'),
+            subtitle: _t(
+              'Sign out from your account on this device',
+              'تسجيل الخروج من حسابك على هذا الجهاز',
+            ),
+            onTap: _logout,
+            iconColor: const Color(0xFFD92D20),
+            iconBackground: _rose,
+            titleColor: const Color(0xFFD92D20),
+            trailingColor: const Color(0xFFD92D20),
+          ),
+        ],
       ),
     );
   }
