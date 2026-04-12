@@ -41,7 +41,13 @@ class _TransactionsPageState extends State<TransactionsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: Icon(
+            _isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           _t('Transactions', 'المعاملات'),
           style: const TextStyle(
