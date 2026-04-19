@@ -26,9 +26,9 @@ class AppColors {
   static const Color skeletonHighlight = Color(0xFFF7FAFB);
 
   static const LinearGradient headerGradient = LinearGradient(
-    colors: [Color(0xFF0057D1), Color(0xFF006BFF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [Color(0xFF071C3F), Color(0xFF0057D1)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
   );
 
   static const LinearGradient buttonGradient = LinearGradient(

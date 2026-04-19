@@ -84,6 +84,38 @@ class LikeCardService {
     return null;
   }
 
+  // ── Reviews ───────────────────────────────────────────────────────────────
+
+  static Future<List<GiftCardReview>> getReviews(String productId) async {
+    final url =
+        '${AppConstants.baseUrl}${AppConstants.giftCardProductsEndpoint}/$productId/reviews';
+    final response = await AppHttpClient.get(url);
+    final json = AppHttpClient.decodeJsonMap(response);
+
+    if (json['responseCode'] == AppConstants.successCode) {
+      return (json['data'] as List)
+          .map((e) => GiftCardReview.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  static Future<bool> submitReview({
+    required String productId,
+    required int rating,
+    required String comment,
+  }) async {
+    final url =
+        '${AppConstants.baseUrl}${AppConstants.giftCardProductsEndpoint}/$productId/reviews';
+    final body = <String, dynamic>{
+      'rating': rating,
+      'comment': comment,
+    };
+    final response = await AppHttpClient.post(url, body: body);
+    final json = AppHttpClient.decodeJsonMap(response);
+    return json['responseCode'] == AppConstants.giftCardReviewCreatedCode;
+  }
+
   // ── Create order ──────────────────────────────────────────────────────────
 
   static Future<LikeCardOrder?> createOrder({

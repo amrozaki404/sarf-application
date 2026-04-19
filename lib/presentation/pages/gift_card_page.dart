@@ -184,10 +184,7 @@ class _GiftCardPageState extends State<GiftCardPage> {
                         onTap: _goToProduct,
                       )
                     : _loading
-                        ? const Center(
-                            key: ValueKey('loading'),
-                            child: CircularProgressIndicator(),
-                          )
+                        ? const _BrowseSkeleton(key: ValueKey('loading'))
                         : _error != null
                             ? _ErrorView(
                                 key: const ValueKey('error'),
@@ -415,7 +412,7 @@ class _SearchResultsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator());
+      return _SearchSkeleton();
     }
     if (results.isEmpty) {
       return Center(
@@ -741,6 +738,167 @@ class _SearchResultTile extends StatelessWidget {
             const SizedBox(width: 6),
             const Icon(Icons.chevron_right_rounded,
                 color: AppColors.textHint, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Skeleton helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Bone extends StatelessWidget {
+  final double w;
+  final double h;
+  final double? radius;
+  const _Bone({required this.w, required this.h, this.radius});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: AppColors.skeletonBase,
+        borderRadius: BorderRadius.circular(radius ?? h / 2),
+      ),
+    );
+  }
+}
+
+// Browse skeleton: popular row + categories grid
+class _BrowseSkeleton extends StatelessWidget {
+  const _BrowseSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        // Popular section header bone
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: _Bone(w: 100, h: 14),
+        ),
+        // Popular horizontal row
+        SizedBox(
+          height: 108,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemCount: 5,
+            itemBuilder: (_, __) => Container(
+              width: 130,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadii.lg,
+                border: Border.all(color: AppColors.borderSoft),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Bone(w: 38, h: 38, radius: 11),
+                  const Spacer(),
+                  _Bone(w: 80, h: 10),
+                  const SizedBox(height: 5),
+                  _Bone(w: 55, h: 9),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Categories section header bone
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: _Bone(w: 110, h: 14),
+        ),
+        // Categories grid
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.55,
+            ),
+            itemCount: 6,
+            itemBuilder: (_, __) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadii.lg,
+                border: Border.all(color: AppColors.borderSoft),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  _Bone(w: 46, h: 46, radius: 13),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _Bone(w: double.infinity, h: 11),
+                        const SizedBox(height: 6),
+                        _Bone(w: 50, h: 9),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Search skeleton: list of result tiles
+class _SearchSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemCount: 6,
+      itemBuilder: (_, __) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadii.lg,
+          border: Border.all(color: AppColors.borderSoft),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            _Bone(w: 46, h: 46, radius: 13),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Bone(w: 120, h: 12),
+                  const SizedBox(height: 6),
+                  _Bone(w: 70, h: 10),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _Bone(w: 30, h: 9),
+                const SizedBox(height: 5),
+                _Bone(w: 60, h: 11),
+              ],
+            ),
           ],
         ),
       ),

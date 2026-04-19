@@ -4,14 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_button.dart';
-import '../../data/models/like_card_models.dart';
-import '../../data/services/like_card_service.dart';
+import '../../data/models/digital_subscription_models.dart';
+import '../../data/services/digital_subscription_service.dart';
+import 'digital_subscriptions_page.dart' show SubBrandAvatar;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-String _fmtSDG(double v) {
+String _sdg(double v) {
   final s = v.toStringAsFixed(0);
   final buf = StringBuffer();
   for (int i = 0; i < s.length; i++) {
@@ -25,25 +26,28 @@ String _fmtK(int n) =>
     n >= 1000 ? '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k' : '$n';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Product Page
+// Detail Page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class GiftCardProductPage extends StatefulWidget {
-  final LikeCardProduct product;
+class DigitalSubscriptionDetailPage extends StatefulWidget {
+  final DigitalSubscription subscription;
 
-  const GiftCardProductPage({super.key, required this.product});
+  const DigitalSubscriptionDetailPage({
+    super.key,
+    required this.subscription,
+  });
 
   @override
-  State<GiftCardProductPage> createState() => _GiftCardProductPageState();
+  State<DigitalSubscriptionDetailPage> createState() => _DetailPageState();
 }
 
-class _GiftCardProductPageState extends State<GiftCardProductPage> {
-  LikeCardDenomination? _selected;
+class _DetailPageState extends State<DigitalSubscriptionDetailPage> {
+  SubDuration? _selected;
   bool _isAr = false;
-  List<GiftCardReview> _reviews = [];
+  List<SubReview> _reviews = [];
   bool _reviewsLoading = true;
 
-  LikeCardProduct get _p => widget.product;
+  DigitalSubscription get _sub => widget.subscription;
 
   @override
   void initState() {
@@ -53,7 +57,8 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
 
   Future<void> _loadReviews() async {
     try {
-      final reviews = await LikeCardService.getReviews(_p.id);
+      final reviews =
+          await DigitalSubscriptionService.getReviews(_sub.id);
       if (!mounted) return;
       setState(() {
         _reviews = reviews;
@@ -72,35 +77,6 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
   }
 
   String _t(String en, String ar) => _isAr ? ar : en;
-
-  void _onContinue() {
-    if (_selected == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _CheckoutSheet(
-        product: _p,
-        denomination: _selected!,
-        isAr: _isAr,
-      ),
-    );
-  }
-
-  void _openWriteReview() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _WriteReviewSheet(
-        product: _p,
-        isAr: _isAr,
-        onSubmitted: _loadReviews,
-      ),
-    );
-  }
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +101,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
             ),
           ),
           title: Text(
-            _isAr ? _p.nameAr : _p.nameEn,
+            _isAr ? _sub.nameAr : _sub.nameEn,
             style: GoogleFonts.cairo(
               fontSize: 17,
               fontWeight: FontWeight.w900,
@@ -146,14 +122,9 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
               children: [
                 _buildStatsStrip(),
                 const SizedBox(height: 16),
-                _buildDenominationsSection(),
-                if ((_isAr
-                        ? _p.activationInstructionsAr
-                        : _p.activationInstructionsEn) !=
-                    null) ...[
-                  const SizedBox(height: 16),
-                  _buildActivationSection(),
-                ],
+                _buildPlansSection(),
+                const SizedBox(height: 16),
+                _buildFeaturesSection(),
                 const SizedBox(height: 16),
                 _buildReviewsSection(),
               ],
@@ -185,7 +156,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
         children: [
           Expanded(
             child: _StatItem(
-              value: _p.rating.toStringAsFixed(1),
+              value: _sub.rating.toStringAsFixed(1),
               label: _t('Rating', 'التقييم'),
               icon: Icons.star_rounded,
               iconColor: const Color(0xFFF59E0B),
@@ -194,7 +165,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
           _VertDivider(),
           Expanded(
             child: _StatItem(
-              value: _fmtK(_p.reviewCount),
+              value: _fmtK(_sub.reviewCount),
               label: _t('Reviews', 'تقييمات'),
               icon: Icons.chat_bubble_outline_rounded,
               iconColor: AppColors.primary,
@@ -203,7 +174,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
           _VertDivider(),
           Expanded(
             child: _StatItem(
-              value: _fmtK(_p.purchaseCount),
+              value: _fmtK(_sub.purchaseCount),
               label: _t('Sold', 'عملية شراء'),
               icon: Icons.shopping_bag_outlined,
               iconColor: AppColors.secondary,
@@ -214,102 +185,28 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
     );
   }
 
-  // ── Brand card ─────────────────────────────────────────────────────────────
+  // ── Plans ──────────────────────────────────────────────────────────────────
 
-  Widget _buildBrandCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadii.xl,
-        border: Border.all(color: AppColors.borderSoft),
-        boxShadow: AppShadows.card,
-      ),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                height: 80,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: _p.brandColor.withAlpha(18),
-                  borderRadius: AppRadii.lg,
-                ),
-              ),
-              _BrandAvatar(product: _p, size: 68),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            _isAr ? _p.nameAr : _p.nameEn,
-            style: GoogleFonts.cairo(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (_p.isPopular) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFFED7AA)),
-              ),
-              child: Text(
-                _t('Popular', 'الأكثر مبيعاً'),
-                style: GoogleFonts.cairo(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFEA580C),
-                ),
-              ),
-            ),
-          ],
-          if ((_isAr ? _p.descAr : _p.descEn) != null) ...[
-            const SizedBox(height: 12),
-            const Divider(color: AppColors.borderSoft),
-            const SizedBox(height: 10),
-            Text(
-              _isAr ? _p.descAr! : _p.descEn!,
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.55,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ── Denominations ──────────────────────────────────────────────────────────
-
-  Widget _buildDenominationsSection() {
+  Widget _buildPlansSection() {
     return _Section(
-      title: _t('Choose your amount', 'اختر المبلغ المناسب'),
+      title: _t('Choose your plan', 'اختر باقتك'),
       subtitle: _t(
-        'Price range: ${_fmtSDG(_p.minPriceSDG)} – ${_fmtSDG(_p.maxPriceSDG)}',
-        'النطاق: ${_fmtSDG(_p.minPriceSDG)} – ${_fmtSDG(_p.maxPriceSDG)}',
+        'Longer plans give better value per month',
+        'الباقات الأطول تعني توفيراً أكبر شهرياً',
       ),
       child: Column(
-        children: _p.denominations.asMap().entries.map((e) {
+        children: _sub.durations.asMap().entries.map((e) {
           final i = e.key;
-          final d = e.value;
+          final dur = e.value;
           return Padding(
             padding:
-                EdgeInsets.only(bottom: i < _p.denominations.length - 1 ? 10 : 0),
-            child: _DenomCard(
-              denomination: d,
-              isSelected: _selected?.id == d.id,
-              brandColor: _p.brandColor,
-              onTap: () => setState(() => _selected = d),
+                EdgeInsets.only(bottom: i < _sub.durations.length - 1 ? 10 : 0),
+            child: _PlanCard(
+              duration: dur,
+              isSelected: _selected?.id == dur.id,
+              brandColor: _sub.brandColor,
+              isAr: _isAr,
+              onTap: () => setState(() => _selected = dur),
             ),
           );
         }).toList(),
@@ -317,71 +214,46 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
     );
   }
 
-  // ── Activation instructions ────────────────────────────────────────────────
+  // ── Features ───────────────────────────────────────────────────────────────
 
-  Widget _buildActivationSection() {
-    final text =
-        _isAr ? _p.activationInstructionsAr! : _p.activationInstructionsEn!;
-    final steps = text.split(' → ');
-    final isSingleLine = steps.length <= 1;
-
+  Widget _buildFeaturesSection() {
+    final features = _isAr ? _sub.featuresAr : _sub.featuresEn;
     return _Section(
-      title: _t('How to Redeem', 'كيفية الاستخدام'),
+      title: _t("What's included", 'ما يشمله الاشتراك'),
+      subtitle: _isAr ? _sub.descAr : _sub.descEn,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isSingleLine)
-            Text(
-              text,
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.6,
-              ),
-            )
-          else
-            ...steps.asMap().entries.map((e) {
-              return Padding(
-                padding:
-                    EdgeInsets.only(bottom: e.key < steps.length - 1 ? 10 : 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 22,
-                      margin: const EdgeInsets.only(top: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(6),
+        children: features
+            .map((f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(top: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary.withAlpha(25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_rounded,
+                            size: 12, color: AppColors.secondary),
                       ),
-                      child: Center(
+                      const SizedBox(width: 10),
+                      Expanded(
                         child: Text(
-                          '${e.key + 1}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                          f,
+                          style: GoogleFonts.cairo(
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                            height: 1.5,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        e.value.trim(),
-                        style: GoogleFonts.cairo(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          height: 1.55,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
+                    ],
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
@@ -402,21 +274,21 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
           _t('No reviews yet. Be the first!', 'لا توجد تقييمات بعد. كن الأول!'),
-          style:
-              GoogleFonts.cairo(fontSize: 13, color: AppColors.textSecondary),
+          style: GoogleFonts.cairo(
+              fontSize: 13, color: AppColors.textSecondary),
         ),
       );
     } else {
       reviewsBody = Column(
         children: [
-          _RatingSummary(product: _p, isAr: _isAr),
+          _RatingSummary(sub: _sub, isAr: _isAr),
           const SizedBox(height: 16),
           ..._reviews.asMap().entries.map((e) => Column(
                 children: [
                   if (e.key > 0)
                     const Divider(
                         height: 20, thickness: 1, color: AppColors.borderSoft),
-                  _ReviewTile(review: e.value),
+                  _ReviewTile(review: e.value, isAr: _isAr),
                 ],
               )),
         ],
@@ -430,6 +302,20 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
         onTap: _openWriteReview,
       ),
       child: reviewsBody,
+    );
+  }
+
+  void _openWriteReview() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WriteReviewSheet(
+        sub: _sub,
+        isAr: _isAr,
+        onSubmitted: _loadReviews,
+      ),
     );
   }
 
@@ -457,6 +343,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
       ),
       child: Row(
         children: [
+          // Price display
           Expanded(
             child: _selected == null
                 ? Column(
@@ -464,7 +351,7 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _t('Select an amount', 'اختر مبلغاً'),
+                        _t('Select a plan', 'اختر باقة'),
                         style: GoogleFonts.cairo(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -473,11 +360,13 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
                       ),
                       Text(
                         _t(
-                          'From ${_fmtSDG(_p.minPriceSDG)}',
-                          'يبدأ من ${_fmtSDG(_p.minPriceSDG)}',
+                          'From ${_sdg(_sub.startingMonthlyPrice)}/mo',
+                          'من ${_sdg(_sub.startingMonthlyPrice)}/شهر',
                         ),
                         style: GoogleFonts.cairo(
-                            fontSize: 12, color: AppColors.textHint),
+                          fontSize: 12,
+                          color: AppColors.textHint,
+                        ),
                       ),
                     ],
                   )
@@ -486,33 +375,50 @@ class _GiftCardProductPageState extends State<GiftCardProductPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _fmtSDG(_selected!.priceSDG),
+                        _sdg(_selected!.totalPrice),
                         style: GoogleFonts.cairo(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w900,
                           color: AppColors.primary,
                           height: 1,
                         ),
                       ),
                       Text(
-                        _selected!.label,
+                        '${_sdg(_selected!.monthlyPrice)} ${_t('/month', '/شهر')}',
                         style: GoogleFonts.cairo(
-                            fontSize: 12, color: AppColors.textSecondary),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
           ),
           const SizedBox(width: 16),
+          // CTA button
           SizedBox(
             width: 160,
             child: AppButton(
-              label: _t('Buy Now', 'شراء الآن'),
-              onPressed: _selected == null ? null : _onContinue,
+              label: _t('Subscribe', 'اشترك الآن'),
+              onPressed: _selected == null ? null : _openCheckout,
               height: 50,
               borderRadius: AppRadii.lg,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openCheckout() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CheckoutSheet(
+        sub: _sub,
+        duration: _selected!,
+        isAr: _isAr,
       ),
     );
   }
@@ -584,7 +490,7 @@ class _Section extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stat item
+// Stat item (in hero)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StatItem extends StatelessWidget {
@@ -635,54 +541,21 @@ class _VertDivider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Brand avatar
+// Plan card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BrandAvatar extends StatelessWidget {
-  final LikeCardProduct product;
-  final double size;
-
-  const _BrandAvatar({required this.product, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = product.brandColor;
-    final radius = BorderRadius.circular(size * 0.26);
-
-    return ClipRRect(
-      borderRadius: radius,
-      child: Container(
-        width: size,
-        height: size,
-        color: color,
-        child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-            ? Image.network(
-                product.imageUrl!,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                loadingBuilder: (_, child, progress) =>
-                    progress == null ? child : const SizedBox.shrink(),
-              )
-            : null,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Denomination card
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DenomCard extends StatelessWidget {
-  final LikeCardDenomination denomination;
+class _PlanCard extends StatelessWidget {
+  final SubDuration duration;
   final bool isSelected;
   final Color brandColor;
+  final bool isAr;
   final VoidCallback onTap;
 
-  const _DenomCard({
-    required this.denomination,
+  const _PlanCard({
+    required this.duration,
     required this.isSelected,
     required this.brandColor,
+    required this.isAr,
     required this.onTap,
   });
 
@@ -705,6 +578,7 @@ class _DenomCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Radio circle
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               width: 20,
@@ -723,20 +597,59 @@ class _DenomCard extends StatelessWidget {
                   : null,
             ),
             const SizedBox(width: 12),
+            // Label + monthly
             Expanded(
-              child: Text(
-                denomination.label,
-                style: GoogleFonts.cairo(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        isAr ? duration.labelAr : duration.labelEn,
+                        style: GoogleFonts.cairo(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (duration.isBestValue) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withAlpha(20),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            isAr ? 'الأوفر' : 'Best value',
+                            style: GoogleFonts.cairo(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    '${_sdg(duration.monthlyPrice)} ${isAr ? 'شهرياً' : '/month'}',
+                    style: GoogleFonts.cairo(
+                      fontSize: 12,
+                      color: isSelected
+                          ? accent.withAlpha(200)
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
+            // Total price
             Text(
-              _fmtSDG(denomination.priceSDG),
+              _sdg(duration.totalPrice),
               style: GoogleFonts.cairo(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: isSelected ? accent : AppColors.textPrimary,
               ),
@@ -749,14 +662,14 @@ class _DenomCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Rating summary
+// Rating summary (aggregate)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RatingSummary extends StatelessWidget {
-  final LikeCardProduct product;
+  final DigitalSubscription sub;
   final bool isAr;
 
-  const _RatingSummary({required this.product, required this.isAr});
+  const _RatingSummary({required this.sub, required this.isAr});
 
   @override
   Widget build(BuildContext context) {
@@ -769,10 +682,11 @@ class _RatingSummary extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Big number
           Column(
             children: [
               Text(
-                product.rating.toStringAsFixed(1),
+                sub.rating.toStringAsFixed(1),
                 style: GoogleFonts.cairo(
                   fontSize: 40,
                   fontWeight: FontWeight.w900,
@@ -785,7 +699,7 @@ class _RatingSummary extends StatelessWidget {
                 children: List.generate(
                   5,
                   (i) => Icon(
-                    i < product.rating.round()
+                    i < sub.rating.round()
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
                     size: 14,
@@ -795,16 +709,18 @@ class _RatingSummary extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${_fmtK(product.reviewCount)} ${isAr ? 'تقييم' : 'reviews'}',
+                '${_fmtK(sub.reviewCount)} ${isAr ? 'تقييم' : 'reviews'}',
                 style:
                     GoogleFonts.cairo(fontSize: 11, color: AppColors.textHint),
               ),
             ],
           ),
           const SizedBox(width: 16),
+          // Bar breakdown (5→1)
           Expanded(
             child: Column(
               children: [5, 4, 3, 2, 1].map((star) {
+                // Approximate distribution
                 final frac = star == 5
                     ? 0.75
                     : star == 4
@@ -855,9 +771,10 @@ class _RatingSummary extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ReviewTile extends StatelessWidget {
-  final GiftCardReview review;
+  final SubReview review;
+  final bool isAr;
 
-  const _ReviewTile({required this.review});
+  const _ReviewTile({required this.review, required this.isAr});
 
   @override
   Widget build(BuildContext context) {
@@ -901,6 +818,7 @@ class _ReviewTile extends StatelessWidget {
                 ],
               ),
             ),
+            // Stars
             Row(
               children: List.generate(
                 5,
@@ -975,12 +893,12 @@ class _WriteReviewButton extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _WriteReviewSheet extends StatefulWidget {
-  final LikeCardProduct product;
+  final DigitalSubscription sub;
   final bool isAr;
   final VoidCallback? onSubmitted;
 
   const _WriteReviewSheet({
-    required this.product,
+    required this.sub,
     required this.isAr,
     this.onSubmitted,
   });
@@ -1026,8 +944,8 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
     }
     setState(() => _loading = true);
     try {
-      final ok = await LikeCardService.submitReview(
-        productId: widget.product.id,
+      final ok = await DigitalSubscriptionService.submitReview(
+        subscriptionId: widget.sub.id,
         rating: _stars,
         comment: _commentCtrl.text.trim(),
       );
@@ -1037,7 +955,7 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(_t(
             'Could not submit review. You may have already reviewed this.',
-            'تعذّر إرسال التقييم. ربما قيّمت هذا المنتج من قبل.',
+            'تعذّر إرسال التقييم. ربما قيّمت هذا الاشتراك من قبل.',
           )),
           behavior: SnackBarBehavior.floating,
           shape:
@@ -1073,6 +991,8 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
     ['Good', 'جيد'],
     ['Excellent', 'ممتاز'],
   ];
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -1156,16 +1076,17 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Product row
         Row(
           children: [
-            _BrandAvatar(product: widget.product, size: 40),
+            SubBrandAvatar(sub: widget.sub, size: 40),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.isAr ? widget.product.nameAr : widget.product.nameEn,
+                    widget.isAr ? widget.sub.nameAr : widget.sub.nameEn,
                     style: GoogleFonts.cairo(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -1183,6 +1104,8 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
           ],
         ),
         const SizedBox(height: 20),
+
+        // Star picker
         Text(
           _t('Your rating', 'تقييمك'),
           style: GoogleFonts.cairo(
@@ -1229,6 +1152,8 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
           ),
         ],
         const SizedBox(height: 18),
+
+        // Comment field
         Text(
           _t('Your comment', 'تعليقك'),
           style: GoogleFonts.cairo(
@@ -1253,8 +1178,8 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
                 GoogleFonts.cairo(fontSize: 13, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: _t(
-                'Tell others about your experience with this gift card…',
-                'أخبر الآخرين عن تجربتك مع هذه البطاقة…',
+                'Tell others about your experience with this subscription…',
+                'أخبر الآخرين عن تجربتك مع هذا الاشتراك…',
               ),
               hintStyle:
                   GoogleFonts.cairo(fontSize: 13, color: AppColors.textHint),
@@ -1269,6 +1194,7 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
           ),
         ),
         const SizedBox(height: 20),
+
         AppButton(
           label: _t('Submit Review', 'إرسال التقييم'),
           onPressed: _submit,
@@ -1286,13 +1212,13 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _CheckoutSheet extends StatefulWidget {
-  final LikeCardProduct product;
-  final LikeCardDenomination denomination;
+  final DigitalSubscription sub;
+  final SubDuration duration;
   final bool isAr;
 
   const _CheckoutSheet({
-    required this.product,
-    required this.denomination,
+    required this.sub,
+    required this.duration,
     required this.isAr,
   });
 
@@ -1301,29 +1227,74 @@ class _CheckoutSheet extends StatefulWidget {
 }
 
 class _CheckoutSheetState extends State<_CheckoutSheet> {
+  late final Map<String, TextEditingController> _controllers;
+  late final Map<String, FocusNode> _focusNodes;
   bool _loading = false;
-  String? _error;
+  String? _formError;
   bool _success = false;
 
   String _t(String en, String ar) => widget.isAr ? ar : en;
 
+  @override
+  void initState() {
+    super.initState();
+    _controllers = {
+      for (final f in widget.sub.fields) f.fieldKey: TextEditingController(),
+    };
+    _focusNodes = {
+      for (final f in widget.sub.fields) f.fieldKey: FocusNode(),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) c.dispose();
+    for (final n in _focusNodes.values) n.dispose();
+    super.dispose();
+  }
+
+  bool _validEmail(String v) =>
+      RegExp(r'^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,}$').hasMatch(v.trim());
+
   Future<void> _confirm() async {
+    for (final field in widget.sub.fields) {
+      final val = _controllers[field.fieldKey]?.text.trim() ?? '';
+      if (field.required && val.isEmpty) {
+        final label = widget.isAr ? field.labelAr : field.labelEn;
+        setState(() => _formError =
+            _t('$label is required', '$label مطلوب'));
+        _focusNodes[field.fieldKey]?.requestFocus();
+        return;
+      }
+      if (field.fieldType == 'EMAIL' && val.isNotEmpty && !_validEmail(val)) {
+        setState(() => _formError =
+            _t('Enter a valid email', 'أدخل بريداً إلكترونياً صحيحاً'));
+        _focusNodes[field.fieldKey]?.requestFocus();
+        return;
+      }
+    }
     setState(() {
       _loading = true;
-      _error = null;
+      _formError = null;
     });
     try {
-      final order = await LikeCardService.createOrder(
-        productId: widget.product.id,
-        denominationId: widget.denomination.id,
+      final fieldValues = <String, String>{
+        for (final f in widget.sub.fields)
+          if ((_controllers[f.fieldKey]?.text.trim() ?? '').isNotEmpty)
+            f.fieldKey: _controllers[f.fieldKey]!.text.trim(),
+      };
+      final ok = await DigitalSubscriptionService.createOrder(
+        subscriptionId: widget.sub.id,
+        planId: widget.duration.id,
+        fieldValues: fieldValues,
       );
       if (!mounted) return;
-      if (order == null) {
+      if (!ok) {
         setState(() {
           _loading = false;
-          _error = _t(
-            'Could not complete your purchase. Please try again.',
-            'تعذر إتمام عملية الشراء. حاول مرة أخرى.',
+          _formError = _t(
+            'Purchase failed. Please try again.',
+            'فشلت عملية الشراء. حاول مرة أخرى.',
           );
         });
         return;
@@ -1332,17 +1303,19 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         _loading = false;
         _success = true;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = _t(
-          'Network error. Please check your connection.',
+        _formError = _t(
+          'Network error. Check your connection.',
           'خطأ في الاتصال. تحقق من الشبكة.',
         );
       });
     }
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -1398,7 +1371,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ),
           const SizedBox(height: 14),
           Text(
-            _t('Purchase complete!', 'تم الشراء بنجاح!'),
+            _t('Order placed!', 'تم الطلب بنجاح!'),
             style: GoogleFonts.cairo(
               fontSize: 20,
               fontWeight: FontWeight.w900,
@@ -1406,16 +1379,24 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            _t(
-              'Your gift card is ready. Check your transactions.',
-              'بطاقتك جاهزة. راجع المعاملات للتفاصيل.',
-            ),
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cairo(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-              height: 1.6,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              _controllers['email']?.text.trim().isNotEmpty == true
+                  ? _t(
+                      'Your subscription will be activated on ${_controllers['email']!.text.trim()}.\nActivation hours: 10 AM – 12 AM.',
+                      'سيتم التفعيل على ${_controllers['email']!.text.trim()}.\nأوقات التفعيل: 10 ص – 12 م.',
+                    )
+                  : _t(
+                      'Your subscription is being processed. You will receive a confirmation shortly.',
+                      'جارٍ معالجة اشتراكك. ستصلك رسالة تأكيد قريباً.',
+                    ),
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.6,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -1432,12 +1413,89 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     );
   }
 
+  Widget _buildFieldInput(SubField field) {
+    final label = widget.isAr ? field.labelAr : field.labelEn;
+    final ctrl = _controllers[field.fieldKey]!;
+    final focus = _focusNodes[field.fieldKey]!;
+    final keyboardType = switch (field.fieldType) {
+      'EMAIL' => TextInputType.emailAddress,
+      'PHONE' => TextInputType.phone,
+      'NUMBER' => TextInputType.number,
+      _ => TextInputType.text,
+    };
+    final icon = switch (field.fieldType) {
+      'EMAIL' => Icons.email_outlined,
+      'PHONE' => Icons.phone_outlined,
+      'NUMBER' => Icons.tag_rounded,
+      _ => Icons.edit_outlined,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.cairo(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (field.required) ...[
+                const SizedBox(width: 3),
+                const Text('*',
+                    style: TextStyle(color: AppColors.error, fontSize: 13)),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: AppRadii.md,
+              border: Border.all(color: AppColors.inputBorder),
+            ),
+            child: TextField(
+              controller: ctrl,
+              focusNode: focus,
+              keyboardType: keyboardType,
+              textDirection: field.fieldType == 'EMAIL' || field.fieldType == 'NUMBER'
+                  ? TextDirection.ltr
+                  : null,
+              onChanged: (_) {
+                if (_formError != null) setState(() => _formError = null);
+              },
+              style: GoogleFonts.cairo(
+                  fontSize: 14, color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: label,
+                hintStyle:
+                    GoogleFonts.cairo(fontSize: 14, color: AppColors.textHint),
+                prefixIcon:
+                    Icon(icon, size: 18, color: AppColors.textHint),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                isDense: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _t('Review purchase', 'مراجعة الشراء'),
+          _t('Review your order', 'مراجعة طلبك'),
           style: GoogleFonts.cairo(
             fontSize: 18,
             fontWeight: FontWeight.w900,
@@ -1445,6 +1503,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ),
         ),
         const SizedBox(height: 14),
+
+        // Order summary
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -1454,68 +1514,86 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ),
           child: Row(
             children: [
-              _BrandAvatar(product: widget.product, size: 44),
+              SubBrandAvatar(sub: widget.sub, size: 44),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.isAr
-                          ? widget.product.nameAr
-                          : widget.product.nameEn,
+                      widget.isAr ? widget.sub.nameAr : widget.sub.nameEn,
                       style: GoogleFonts.cairo(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary),
                     ),
                     Text(
-                      widget.denomination.label,
+                      widget.isAr
+                          ? widget.duration.labelAr
+                          : widget.duration.labelEn,
                       style: GoogleFonts.cairo(
                           fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
-              Text(
-                _fmtSDG(widget.denomination.priceSDG),
-                style: GoogleFonts.cairo(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.primary,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _sdg(widget.duration.totalPrice),
+                    style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  Text(
+                    '${_sdg(widget.duration.monthlyPrice)}/${_t('mo', 'شهر')}',
+                    style: GoogleFonts.cairo(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.error.withAlpha(20),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.error.withAlpha(60)),
-            ),
-            child: Row(
+
+        // Dynamic fields
+        if (widget.sub.fields.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ...widget.sub.fields.map((f) => _buildFieldInput(f)),
+          if (_formError != null) ...[
+            const SizedBox(height: 5),
+            Row(
               children: [
                 const Icon(Icons.error_outline_rounded,
-                    color: AppColors.error, size: 16),
-                const SizedBox(width: 8),
+                    size: 13, color: AppColors.error),
+                const SizedBox(width: 4),
                 Expanded(
-                  child: Text(
-                    _error!,
-                    style:
-                        GoogleFonts.cairo(fontSize: 12, color: AppColors.error),
-                  ),
+                  child: Text(_formError!,
+                      style: GoogleFonts.cairo(
+                          fontSize: 11, color: AppColors.error)),
                 ),
               ],
             ),
+          ],
+        ] else if (_formError != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 13, color: AppColors.error),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(_formError!,
+                    style:
+                        GoogleFonts.cairo(fontSize: 11, color: AppColors.error)),
+              ),
+            ],
           ),
         ],
+
         const SizedBox(height: 20),
         AppButton(
           label: _t('Confirm & Pay', 'تأكيد والدفع'),
@@ -1526,8 +1604,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         const SizedBox(height: 6),
         Center(
           child: Text(
-            _t('Amount will be deducted from your wallet',
-                'سيتم الخصم من محفظتك'),
+            _t('Deducted from your wallet', 'سيتم الخصم من محفظتك'),
             style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textHint),
           ),
         ),

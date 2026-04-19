@@ -1,6 +1,6 @@
 class AppConstants {
   // Local dev — physical device must use the host machine's LAN IP
-  static const String baseUrl = 'http://10.247.233.67:4500';
+  static const String baseUrl = 'http://10.222.22.72:4500';
   static const String appVersion = '1.0.0';
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -11,6 +11,9 @@ class AppConstants {
   static const String requestOtpEndpoint = '/api/registration/request-otp';
   static const String confirmOtpEndpoint = '/api/registration/confirm-otp';
   static const String submitEndpoint = '/api/registration/submit';
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+  static const String walletBalanceEndpoint = '/api/wallet/balance';
 
   // ── Home ──────────────────────────────────────────────────────────────────
   static const String servicesEndpoint = '/api/home/services';
@@ -37,6 +40,11 @@ class AppConstants {
   // single:  GET $giftCardProductsEndpoint/{productId}
   static const String giftCardOrdersEndpoint = '/api/giftcard/orders';
 
+  // ── Digital Subscriptions ─────────────────────────────────────────────────
+  static const String digitalSubsEndpoint = '/api/subscription/subscriptions';
+  // single: GET $digitalSubsEndpoint/{id}
+  static const String digitalSubOrdersEndpoint = '/api/subscription/orders';
+
   // ── Auth token refresh ────────────────────────────────────────────────────
   static const String refreshTokenEndpoint = '/api/auth/refresh';
 
@@ -44,8 +52,6 @@ class AppConstants {
   static const String tokenKey = 'jwt_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'user_data';
-  static const String biometricEnabledKey = 'biometric_enabled';
-
   // ── Response codes ────────────────────────────────────────────────────────
   static const String successCode = '0';
   static const String otpSentCode = '1';
@@ -67,4 +73,13 @@ class AppConstants {
   static const String giftCardDenominationNotFoundCode = '22';
   static const String giftCardOrderCreatedCode = '23';
   static const String giftCardOrderNotFoundCode = '24';
+  static const String digitalSubNotFoundCode = '30';
+  static const String digitalSubPlanNotFoundCode = '31';
+  static const String digitalSubOrderCreatedCode = '32';
+  static const String digitalSubOrderNotFoundCode = '33';
+  static const String digitalSubFieldRequiredCode = '34';
+  static const String digitalSubReviewCreatedCode = '35';
+  static const String digitalSubReviewAlreadyExistsCode = '36';
+  static const String giftCardReviewCreatedCode = '40';
+  static const String giftCardReviewAlreadyExistsCode = '41';
 }

@@ -6,7 +6,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/services/biometric_service.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
 import '../../core/constants/app_constants.dart';
@@ -37,30 +36,11 @@ class _LoginPageState extends State<LoginPage> {
   bool _isGoogleLoading = false;
   String? _errorMessage;
 
-  bool _biometricAvailable = false;
-  bool _biometricEnabled = false;
-
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
     serverClientId:
         '420777617459-17g6ee7fgh72ce0ao6ifkf2bq26ce7c5.apps.googleusercontent.com',
   );
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBiometricState();
-  }
-
-  Future<void> _loadBiometricState() async {
-    final available = await BiometricService.isAvailable();
-    final enabled = await BiometricService.isEnabled();
-    if (!mounted) return;
-    setState(() {
-      _biometricAvailable = available;
-      _biometricEnabled = enabled;
-    });
-  }
 
   @override
   void dispose() {
@@ -177,11 +157,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _navigateToHome(AuthData user) async {
-    // If biometrics is available but the user hasn't opted in yet, offer it.
-    if (_biometricAvailable && !_biometricEnabled) {
-      await _offerEnableBiometric();
-    }
-    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainShellPage(),
@@ -191,41 +166,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
       (_) => false,
     );
-  }
-
-  Future<void> _offerEnableBiometric() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          _isArabic ? 'تفعيل الدخول البيومتري' : 'Enable Biometric Login',
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-        ),
-        content: Text(
-          _isArabic
-              ? 'هل تريد استخدام بصمة الإصبع أو Face ID للدخول بشكل أسرع؟'
-              : 'Would you like to use fingerprint or Face ID for faster sign-in?',
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(_isArabic ? 'لاحقاً' : 'Not now'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              _isArabic ? 'تفعيل' : 'Enable',
-              style: const TextStyle(color: AppColors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await BiometricService.setEnabled(true);
-    }
   }
 
   Future<_GoogleSignupDetails?> _collectGoogleDetails(String? email) async {
@@ -296,12 +236,12 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       children: [
                         _buildHeaderActions(),
-                        const SizedBox(height: 34),
+                        const SizedBox(height: 48),
                         _buildBrandLockup(),
-                        const SizedBox(height: 58),
+                        const SizedBox(height: 90),
                         _buildLoginPanel(),
                         const SizedBox(height: 14),
-                        _buildBottomBiometricArea(),
+                        _buildVersionLabel(),
                       ],
                     ),
                   ),
@@ -320,49 +260,7 @@ class _LoginPageState extends State<LoginPage> {
       decoration: const BoxDecoration(
         gradient: AppColors.headerGradient,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(34),
-          bottomRight: Radius.circular(34),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -54,
-            right: -30,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 88,
-            left: -76,
-            child: Container(
-              width: 230,
-              height: 230,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.06),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -40,
-            bottom: 12,
-            child: Container(
-              width: 190,
-              height: 190,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -372,16 +270,7 @@ class _LoginPageState extends State<LoginPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Image.asset('assets/images/app_icon.png'),
-          ),
+          Image.asset('assets/images/app_icon.png', width: 70, height: 70),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,36 +385,10 @@ class _LoginPageState extends State<LoginPage> {
               _buildError(_errorMessage!),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _login,
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        S.signIn,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-              ),
+            GradientButton(
+              label: S.signIn,
+              isLoading: _isLoading,
+              onPressed: _isLoading ? null : _login,
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -539,146 +402,9 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildBottomBiometricArea() {
-    // Show the biometric button only when it's available AND the user has
-    // enabled it. Setup is offered after a successful password/Google login.
-    if (!_biometricAvailable || !_biometricEnabled) {
-      return Column(
-        children: [
-          const SizedBox(height: 10),
-          Center(
-            child: Text(
-              _isArabic
-                  ? 'الإصدار ${AppConstants.appVersion}'
-                  : 'Version ${AppConstants.appVersion}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    const label = 'Sign in with biometrics';
-    const labelAr = 'تسجيل الدخول باستخدام البصمة';
-    const sublabel = 'Use your device biometrics for faster sign in';
-    const sublabelAr = 'استخدم بصمة الجهاز للدخول بشكل أسرع';
-
+  Widget _buildVersionLabel() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(26),
-          child: InkWell(
-            onTap: _showBiometricInfo,
-            borderRadius: BorderRadius.circular(26),
-            child: Ink(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.96),
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.12),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                textDirection:
-                    _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primaryDark, AppColors.primary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Icon(
-                      Icons.fingerprint_rounded,
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: _isArabic
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isArabic ? 'دخول سريع' : 'Quick access',
-                          textAlign:
-                              _isArabic ? TextAlign.right : TextAlign.left,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _isArabic ? labelAr : label,
-                          textAlign:
-                              _isArabic ? TextAlign.right : TextAlign.left,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _isArabic ? sublabelAr : sublabel,
-                          textAlign:
-                              _isArabic ? TextAlign.right : TextAlign.left,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F7FB),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _isArabic
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
-                      color: AppColors.primaryDark,
-                      size: 18,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
         const SizedBox(height: 10),
         Center(
           child: Text(
@@ -908,64 +634,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _showBiometricInfo() async {
-    // Button is only shown when biometrics is available + enabled,
-    // so we go straight to authentication.
-    final authenticated = await BiometricService.authenticate(
-      localizedReason: _isArabic
-          ? 'استخدم بصمتك للدخول إلى حساب Sarf'
-          : 'Use your biometrics to sign in to Sarf',
-    );
-    if (!mounted) return;
-
-    if (!authenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isArabic
-                ? 'فشل التحقق البيومتري. حاول مرة أخرى.'
-                : 'Biometric verification failed. Please try again.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final user = await AuthService.getUser();
-    if (!mounted) return;
-
-    if (user == null) {
-      // Stored session was cleared (logout / reinstall).
-      // Disable biometrics so the button disappears and ask to re-login.
-      await BiometricService.setEnabled(false);
-      if (!mounted) return;
-      setState(() => _biometricEnabled = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isArabic
-                ? 'انتهت جلستك. يرجى تسجيل الدخول بكلمة المرور أولاً.'
-                : 'Your session has expired. Please sign in with your password.',
-          ),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-      return;
-    }
-
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        pageBuilder: (_, anim, __) => const MainShellPage(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-      (_) => false,
-    );
-  }
-
   bool get _isArabic => LocaleService.locale.languageCode == 'ar';
 
   bool get _googleSignInSupported =>
@@ -988,29 +656,28 @@ class _TopActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.18),
-      shape: const StadiumBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1028,19 +695,19 @@ class _LanguageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.18),
-      shape: const StadiumBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'EN',
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'EN',
                 style: TextStyle(
                   color: isArabic
                       ? Colors.white.withOpacity(0.72)
@@ -1073,7 +740,6 @@ class _LanguageButton extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }

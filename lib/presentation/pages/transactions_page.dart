@@ -42,10 +42,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: Icon(
-            _isAr ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
-            color: AppColors.textPrimary,
-          ),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(

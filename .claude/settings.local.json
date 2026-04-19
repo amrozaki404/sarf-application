@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(flutter pub:*)",
-      "Bash(./gradlew signingReport)"
+      "Bash(./gradlew signingReport)",
+      "Bash(flutter analyze:*)",
+      "Bash(xargs grep *)"
     ]
   }
 }

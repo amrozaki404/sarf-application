@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../data/models/like_card_models.dart';
-import '../../data/services/like_card_service.dart';
-import 'gift_card_product_page.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+import '../../data/models/digital_subscription_models.dart';
+import '../../data/services/digital_subscription_service.dart';
+import 'digital_subscription_detail_page.dart';
 
 String _fmtSDG(double v) {
   final s = v.toStringAsFixed(0);
@@ -20,26 +16,23 @@ String _fmtSDG(double v) {
   return '$buf';
 }
 
-String _fmtK(int n) =>
-    n >= 1000 ? '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k' : '$n';
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Page
+// Browse Page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class GiftCardCategoryPage extends StatefulWidget {
-  final LikeCardCategory category;
-
-  const GiftCardCategoryPage({super.key, required this.category});
+class DigitalSubscriptionsPage extends StatefulWidget {
+  const DigitalSubscriptionsPage({super.key});
 
   @override
-  State<GiftCardCategoryPage> createState() => _GiftCardCategoryPageState();
+  State<DigitalSubscriptionsPage> createState() =>
+      _DigitalSubscriptionsPageState();
 }
 
-class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
+class _DigitalSubscriptionsPageState extends State<DigitalSubscriptionsPage> {
   final _searchCtrl = TextEditingController();
-  List<LikeCardProduct> _all = [];
-  List<LikeCardProduct> _filtered = [];
+  SubCategory _selectedCat = SubCategory.all;
+  List<DigitalSubscription> _all = [];
+  List<DigitalSubscription> _filtered = [];
   bool _loading = true;
   String? _error;
 
@@ -67,11 +60,10 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
       _error = null;
     });
     try {
-      final products =
-          await LikeCardService.getProductsByCategory(widget.category.id);
+      final subs = await DigitalSubscriptionService.getSubscriptions();
       if (!mounted) return;
       setState(() {
-        _all = products;
+        _all = subs;
         _loading = false;
       });
       _applyFilters();
@@ -87,17 +79,22 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
   void _applyFilters() {
     final q = _searchCtrl.text.toLowerCase().trim();
     setState(() {
-      _filtered = _all.where((p) {
-        return q.isEmpty ||
-            p.nameEn.toLowerCase().contains(q) ||
-            p.nameAr.contains(q);
+      _filtered = _all.where((s) {
+        final matchCat =
+            _selectedCat == SubCategory.all || s.category == _selectedCat;
+        final matchQ = q.isEmpty ||
+            s.nameEn.toLowerCase().contains(q) ||
+            s.nameAr.contains(q);
+        return matchCat && matchQ;
       }).toList();
     });
   }
 
-  void _goToProduct(LikeCardProduct product) {
+  void _openDetail(DigitalSubscription sub) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => GiftCardProductPage(product: product)),
+      MaterialPageRoute(
+        builder: (_) => DigitalSubscriptionDetailPage(subscription: sub),
+      ),
     );
   }
 
@@ -109,40 +106,43 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
       textDirection: _isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(
-              _isAr
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_rounded,
-              size: 18,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          title: Text(
-            _isAr ? widget.category.nameAr : widget.category.nameEn,
-            style: GoogleFonts.cairo(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          centerTitle: true,
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(1),
-            child: Container(height: 1, color: AppColors.borderSoft),
-          ),
-        ),
+        appBar: _buildAppBar(),
         body: Column(
           children: [
             _buildSearch(),
+            _buildCategoryStrip(),
             Expanded(child: _buildBody()),
           ],
         ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: AppColors.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).pop(),
+        icon: Icon(
+          _isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
+          size: 18,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      title: Text(
+        _t('Digital Subscriptions', 'الاشتراكات الرقمية'),
+        style: GoogleFonts.cairo(
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      centerTitle: true,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: AppColors.borderSoft),
       ),
     );
   }
@@ -160,11 +160,12 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
         ),
         child: TextField(
           controller: _searchCtrl,
-          style: GoogleFonts.cairo(fontSize: 14, color: AppColors.textPrimary),
+          style: GoogleFonts.cairo(
+              fontSize: 14, color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: _t('Search cards…', 'ابحث عن بطاقة…'),
-            hintStyle:
-                GoogleFonts.cairo(fontSize: 14, color: AppColors.textHint),
+            hintText: _t('Search subscriptions…', 'ابحث عن اشتراك…'),
+            hintStyle: GoogleFonts.cairo(
+                fontSize: 14, color: AppColors.textHint),
             prefixIcon: const Icon(Icons.search_rounded,
                 color: AppColors.textHint, size: 19),
             suffixIcon: _searchCtrl.text.isNotEmpty
@@ -189,11 +190,63 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
     );
   }
 
+  Widget _buildCategoryStrip() {
+    return SizedBox(
+      height: 50,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        scrollDirection: Axis.horizontal,
+        itemCount: SubCategory.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final cat = SubCategory.values[i];
+          final sel = _selectedCat == cat;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedCat = cat);
+              _applyFilters();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: sel ? AppColors.primary : AppColors.surface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: sel ? AppColors.primary : AppColors.borderSoft,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(cat.icon,
+                      size: 13,
+                      color: sel ? Colors.white : AppColors.textSecondary),
+                  const SizedBox(width: 5),
+                  Text(
+                    _isAr ? cat.labelAr : cat.labelEn,
+                    style: GoogleFonts.cairo(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color:
+                          sel ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildBody() {
     if (_loading) {
       return ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-        itemCount: 6,
+        itemCount: 5,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, __) => const _SkeletonCard(),
       );
@@ -209,14 +262,14 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
       onRefresh: _load,
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-        physics:
-            const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
         itemCount: _filtered.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _ProductCard(
-          product: _filtered[i],
+        itemBuilder: (_, i) => _SubCard(
+          sub: _filtered[i],
           isAr: _isAr,
-          onTap: () => _goToProduct(_filtered[i]),
+          onTap: () => _openDetail(_filtered[i]),
         ),
       ),
     );
@@ -224,19 +277,23 @@ class _GiftCardCategoryPageState extends State<GiftCardCategoryPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Product card — matches digital subscription card design
+// List card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProductCard extends StatelessWidget {
-  final LikeCardProduct product;
+class _SubCard extends StatelessWidget {
+  final DigitalSubscription sub;
   final bool isAr;
   final VoidCallback onTap;
 
-  const _ProductCard({
-    required this.product,
+  const _SubCard({
+    required this.sub,
     required this.isAr,
     required this.onTap,
   });
+
+  String _fmtCount(int n) => n >= 1000
+      ? '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}k'
+      : '$n';
 
   @override
   Widget build(BuildContext context) {
@@ -256,22 +313,18 @@ class _ProductCard extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                _BrandAvatar(
-                  color: product.brandColor,
-                  imageUrl: product.imageUrl,
-                  size: 58,
-                ),
+                SubBrandAvatar(sub: sub, size: 58),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name + popular badge
+                      // Name row
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              isAr ? product.nameAr : product.nameEn,
+                              isAr ? sub.nameAr : sub.nameEn,
                               style: GoogleFonts.cairo(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
@@ -281,7 +334,7 @@ class _ProductCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (product.isPopular) ...[
+                          if (sub.isPopular) ...[
                             const SizedBox(width: 6),
                             _Badge(
                               label: isAr ? 'الأكثر مبيعاً' : 'Popular',
@@ -300,7 +353,7 @@ class _ProductCard extends StatelessWidget {
                               size: 13, color: Color(0xFFF59E0B)),
                           const SizedBox(width: 3),
                           Text(
-                            product.rating.toStringAsFixed(1),
+                            sub.rating.toStringAsFixed(1),
                             style: GoogleFonts.cairo(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -309,22 +362,22 @@ class _ProductCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '(${_fmtK(product.reviewCount)})',
+                            '(${_fmtCount(sub.reviewCount)})',
                             style: GoogleFonts.cairo(
                                 fontSize: 11, color: AppColors.textHint),
                           ),
                           const Spacer(),
                           Text(
                             isAr
-                                ? '${_fmtK(product.purchaseCount)} عملية شراء'
-                                : '${_fmtK(product.purchaseCount)} sold',
+                                ? '${_fmtCount(sub.purchaseCount)} عملية شراء'
+                                : '${_fmtCount(sub.purchaseCount)} sold',
                             style: GoogleFonts.cairo(
                                 fontSize: 11, color: AppColors.textHint),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      // Price range
+                      // Price
                       RichText(
                         text: TextSpan(children: [
                           TextSpan(
@@ -334,7 +387,7 @@ class _ProductCard extends StatelessWidget {
                                 color: AppColors.textSecondary),
                           ),
                           TextSpan(
-                            text: _fmtSDG(product.minPriceSDG),
+                            text: _fmtSDG(sub.startingMonthlyPrice),
                             style: GoogleFonts.cairo(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
@@ -342,7 +395,7 @@ class _ProductCard extends StatelessWidget {
                             ),
                           ),
                           TextSpan(
-                            text: ' SDG',
+                            text: isAr ? '/شهر' : '/mo',
                             style: GoogleFonts.cairo(
                                 fontSize: 11,
                                 color: AppColors.textSecondary),
@@ -365,32 +418,29 @@ class _ProductCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Brand avatar
+// Public: Brand avatar — shared with detail page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BrandAvatar extends StatelessWidget {
-  final Color color;
+class SubBrandAvatar extends StatelessWidget {
+  final DigitalSubscription sub;
   final double size;
-  final String? imageUrl;
 
-  const _BrandAvatar({
-    required this.color,
-    required this.size,
-    this.imageUrl,
-  });
+  const SubBrandAvatar({super.key, required this.sub, required this.size});
 
   @override
   Widget build(BuildContext context) {
+    final color = sub.brandColor;
     final radius = BorderRadius.circular(size * 0.26);
+
     return ClipRRect(
       borderRadius: radius,
       child: Container(
         width: size,
         height: size,
         color: color,
-        child: imageUrl != null && imageUrl!.isNotEmpty
+        child: sub.imageUrl != null && sub.imageUrl!.isNotEmpty
             ? Image.network(
-                imageUrl!,
+                sub.imageUrl!,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 loadingBuilder: (_, child, progress) =>
@@ -403,7 +453,7 @@ class _BrandAvatar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Badge
+// Small reusable badge
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Badge extends StatelessWidget {

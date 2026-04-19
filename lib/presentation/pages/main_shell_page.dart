@@ -1,10 +1,8 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/localization/locale_service.dart';
-import '../../core/services/biometric_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/services/auth_service.dart';
@@ -94,7 +92,6 @@ class MorePage extends StatefulWidget {
 }
 
 class _MorePageState extends State<MorePage> {
-  static const Color _surfaceBorder = Color(0xFFE7E9EF);
   static const Color _deepNavy = Color(0xFF0E2344);
   static const Color _softBlue = Color(0xFF1A73E8);
   static const Color _mistBlue = Color(0xFFF5F8FF);
@@ -102,9 +99,6 @@ class _MorePageState extends State<MorePage> {
 
   AuthData? _user;
   int _unreadCount = 0;
-  bool _biometricAvailable = false;
-  bool _biometricEnabled = false;
-
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
   String _t(String en, String ar) => _isArabic ? ar : en;
@@ -114,23 +108,6 @@ class _MorePageState extends State<MorePage> {
     super.initState();
     _loadUser();
     _loadUnreadCount();
-    _loadBiometricState();
-  }
-
-  Future<void> _loadBiometricState() async {
-    final available = await BiometricService.isAvailable();
-    final enabled = await BiometricService.isEnabled();
-    if (!mounted) return;
-    setState(() {
-      _biometricAvailable = available;
-      _biometricEnabled = enabled;
-    });
-  }
-
-  Future<void> _toggleBiometric(bool value) async {
-    await BiometricService.setEnabled(value);
-    if (!mounted) return;
-    setState(() => _biometricEnabled = value);
   }
 
   Future<void> _loadUser() async {
@@ -294,354 +271,155 @@ class _MorePageState extends State<MorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final firstName = _user?.firstName.trim() ?? '';
+    final displayName = firstName.isNotEmpty ? firstName : _t('User', 'المستخدم');
+    final initial = displayName[0].toUpperCase();
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            _isArabic ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
-            color: AppColors.textPrimary,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          _t('More', 'المزيد'),
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      backgroundColor: const Color(0xFFF4F7FC),
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+        padding: EdgeInsets.zero,
         children: [
-          _item(
-            Icons.language_rounded,
-            _t('Language', 'اللغة'),
-            subtitle: LocaleService.isArabic ? 'English' : 'العربية',
-            onTap: _toggleLanguage,
-            iconColor: _softBlue,
-            iconBackground: _mistBlue,
-          ),
-          _item(
-            Icons.person_outline_rounded,
-            _t('Account', 'الحساب'),
-            subtitle: _user?.fullName,
-            onTap: _openAccount,
-            iconColor: _deepNavy,
-            iconBackground: const Color(0xFFF2F4F7),
-          ),
-          _item(
-            Icons.logout_rounded,
-            _t('Logout', 'تسجيل الخروج'),
-            subtitle: _t(
-              'Sign out from your account on this device',
-              'تسجيل الخروج من حسابك على هذا الجهاز',
+          _buildProfileHeader(displayName, initial),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionTitle(_t('General', 'عام')),
+                _item(
+                  Icons.language_rounded,
+                  _t('Language', 'اللغة'),
+                  subtitle: LocaleService.isArabic ? 'English' : 'العربية',
+                  onTap: _toggleLanguage,
+                  iconColor: _softBlue,
+                  iconBackground: _mistBlue,
+                ),
+                _item(
+                  Icons.notifications_none_rounded,
+                  _t('Notifications', 'الإشعارات'),
+                  badgeText: _unreadCount > 0 ? '$_unreadCount' : null,
+                  onTap: _openNotifications,
+                  iconColor: const Color(0xFF8B5CF6),
+                  iconBackground: const Color(0xFFF3F0FF),
+                ),
+                const SizedBox(height: 20),
+                _sectionTitle(_t('Account', 'الحساب')),
+                _item(
+                  Icons.person_outline_rounded,
+                  _t('Profile', 'الملف الشخصي'),
+                  subtitle: _user?.fullName,
+                  onTap: _openAccount,
+                  iconColor: _deepNavy,
+                  iconBackground: const Color(0xFFF2F4F7),
+                ),
+                const SizedBox(height: 20),
+                _sectionTitle(_t('Support', 'الدعم')),
+                _item(
+                  Icons.chat_bubble_outline_rounded,
+                  _t('Contact Us', 'تواصل معنا'),
+                  subtitle: 'WhatsApp',
+                  onTap: _openWhatsApp,
+                  iconColor: const Color(0xFF25D366),
+                  iconBackground: const Color(0xFFECFDF5),
+                ),
+                _item(
+                  Icons.info_outline_rounded,
+                  _t('About', 'عن التطبيق'),
+                  subtitle: _t('Version ${AppConstants.appVersion}', 'الإصدار ${AppConstants.appVersion}'),
+                  onTap: _showAbout,
+                  iconColor: AppColors.primary,
+                  iconBackground: const Color(0xFFEFF6FF),
+                ),
+                const SizedBox(height: 20),
+                _item(
+                  Icons.logout_rounded,
+                  _t('Logout', 'تسجيل الخروج'),
+                  onTap: _logout,
+                  iconColor: const Color(0xFFD92D20),
+                  iconBackground: _rose,
+                  titleColor: const Color(0xFFD92D20),
+                ),
+              ],
             ),
-            onTap: _logout,
-            iconColor: const Color(0xFFD92D20),
-            iconBackground: _rose,
-            titleColor: const Color(0xFFD92D20),
-            trailingColor: const Color(0xFFD92D20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTopBar(String avatarText) {
-    return SizedBox(
-      height: 64,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _MoreTopCircleButton(
-              icon: Icons.menu_rounded,
-              foreground: const Color(0xFF6E7688),
-              background: Colors.white,
-              borderColor: _surfaceBorder,
-            ),
-          ),
-          const Center(child: _MoreBrandMark()),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _MoreTopCircleButton(
-              label: avatarText,
-              foreground: Colors.white,
-              background: _deepNavy,
-              borderColor: Colors.transparent,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeroCard(String displayName) {
+  Widget _buildProfileHeader(String name, String initial) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_deepNavy, _softBlue],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: _softBlue.withOpacity(0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -18,
-            right: _isArabic ? null : -10,
-            left: _isArabic ? -10 : null,
-            child: Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -30,
-            left: _isArabic ? null : -20,
-            right: _isArabic ? -20 : null,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment:
-                _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  color: Colors.white.withOpacity(0.20),
+                  shape: BoxShape.circle,
                 ),
-                child: Text(
-                  _t('Account & support', 'الحساب والدعم'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                displayName,
-                textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _t(
-                  'Control your account settings, support, and app preferences from one place.',
-                  'تحكم في إعدادات الحساب والدعم وتفضيلات التطبيق من مكان واحد.',
-                ),
-                textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.82),
-                  fontWeight: FontWeight.w600,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                textDirection:
-                    _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                children: [
-                  Expanded(
-                    child: _heroStat(
-                      title: _t('Language', 'اللغة'),
-                      value: LocaleService.isArabic ? 'AR / EN' : 'EN / AR',
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _heroStat(
-                      title: _t('Support', 'الدعم'),
-                      value: 'WhatsApp',
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _t('Hello,', 'مرحباً،'),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.70),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _heroStat({
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.76),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionLabel(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment:
-          _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-          style: const TextStyle(
-            color: Color(0xFF101828),
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-          style: const TextStyle(
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildContactCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF103B2E), Color(0xFF1E8A57)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E8A57).withOpacity(0.18),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        textDirection: _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFF25D366),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.chat_bubble_rounded,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  _isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _t('Contact us', 'تواصل معنا'),
-                  textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'WhatsApp  +249115979161',
-                  textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.74),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: _openWhatsApp,
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withOpacity(0.16),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(_t('Open', 'فتح')),
-          ),
-        ],
       ),
     );
   }
@@ -681,236 +459,85 @@ class _MorePageState extends State<MorePage> {
     Color? iconColor,
     Color? iconBackground,
     Color? titleColor,
-    Color? trailingColor,
     String? badgeText,
-    Widget? trailing,
     required VoidCallback? onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFE7E9EF)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.025),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            textDirection:
-                _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: iconBackground ?? const Color(0xFFF3F7F9),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor ?? AppColors.exchangeDark,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      _isArabic
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      textAlign: _isArabic ? TextAlign.right : TextAlign.left,
-                      style: TextStyle(
-                        color: titleColor ?? AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                    if (subtitle != null && subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        textAlign:
-                            _isArabic ? TextAlign.right : TextAlign.left,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (trailing != null)
-                trailing
-              else
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  textDirection:
-                      _isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                  children: [
-                    if (badgeText != null) ...[
-                      Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 26,
-                          minHeight: 26,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          badgeText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _isArabic
-                            ? Icons.chevron_left_rounded
-                            : Icons.chevron_right_rounded,
-                        color: trailingColor ?? AppColors.textHint,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreTopCircleButton extends StatelessWidget {
-  final IconData? icon;
-  final String? label;
-  final Color foreground;
-  final Color background;
-  final Color borderColor;
-  final VoidCallback? onTap;
-
-  const _MoreTopCircleButton({
-    this.icon,
-    this.label,
-    required this.foreground,
-    required this.background,
-    required this.borderColor,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: background,
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor),
-      ),
-      alignment: Alignment.center,
-      child: icon != null
-          ? Icon(icon, color: foreground, size: 22)
-          : Text(
-              label ?? '',
-              style: TextStyle(
-                color: foreground,
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
-            ),
-    );
-
-    if (onTap == null) {
-      return child;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _MoreBrandMark extends StatelessWidget {
-  const _MoreBrandMark();
-
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          'assets/images/app_icon.png',
-          width: 36,
-          height: 36,
-        ),
-        const SizedBox(width: 10),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isArabic ? 'صرف' : 'Sarf',
-              style: const TextStyle(
-                color: Color(0xFF101828),
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                height: 1,
-              ),
-            ),
-            Text(
-              'Exchange',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-      ],
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: iconBackground ?? const Color(0xFFF3F7F9),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, color: iconColor ?? AppColors.exchangeDark, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: titleColor ?? AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (badgeText != null)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  badgeText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textHint, size: 20),
+          ],
+        ),
+      ),
     );
   }
 }

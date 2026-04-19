@@ -124,7 +124,7 @@ class AuthShell extends StatelessWidget {
               ),
             ),
             Transform.translate(
-              offset: const Offset(0, -34),
+              offset: const Offset(0, -10),
               child: Container(
                 width: double.infinity,
                 margin: const EdgeInsets.symmetric(horizontal: 18),
@@ -208,17 +208,16 @@ class _AuthCircleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withOpacity(0.16),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(icon, color: Colors.white, size: 18),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.16),
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

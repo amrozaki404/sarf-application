@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hex → Color helper
+// Color helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-Color _hexToColor(String hex) {
-  final h = hex.replaceAll('#', '');
-  return Color(int.parse('FF$h', radix: 16));
+const _kBrandPalette = [
+  Color(0xFF6C5CE7), Color(0xFFE17055), Color(0xFF00B894),
+  Color(0xFF0984E3), Color(0xFFFD9644), Color(0xFF00CEC9),
+  Color(0xFFD63031), Color(0xFF6D4C41), Color(0xFF00897B),
+  Color(0xFF8E24AA), Color(0xFF1E88E5), Color(0xFF43A047),
+];
+
+Color _colorFromInitial(String initial) {
+  final code = initial.isEmpty ? 65 : initial.codeUnitAt(0);
+  return _kBrandPalette[code % _kBrandPalette.length];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,7 +24,6 @@ class LikeCardCategory {
   final String id;
   final String nameEn;
   final String nameAr;
-  final String colorHex;
   final String? iconUrl;
   final int productCount;
 
@@ -25,20 +31,17 @@ class LikeCardCategory {
     required this.id,
     required this.nameEn,
     required this.nameAr,
-    required this.colorHex,
     this.iconUrl,
     required this.productCount,
   });
 
-  /// Parsed brand color — keeps existing page code working unchanged.
-  Color get color => _hexToColor(colorHex);
+  Color get color => _colorFromInitial(nameEn);
 
   factory LikeCardCategory.fromJson(Map<String, dynamic> json) {
     return LikeCardCategory(
       id: json['id'] as String,
       nameEn: json['nameEn'] as String,
       nameAr: json['nameAr'] as String,
-      colorHex: json['colorHex'] as String? ?? '#006BFF',
       iconUrl: json['iconUrl'] as String?,
       productCount: (json['productCount'] as num?)?.toInt() ?? 0,
     );
@@ -54,12 +57,16 @@ class LikeCardProduct {
   final String categoryId;
   final String nameEn;
   final String nameAr;
-  final String colorHex;
   final String initial;
   final String? imageUrl;
   final String? descEn;
   final String? descAr;
+  final String? activationInstructionsEn;
+  final String? activationInstructionsAr;
   final bool isPopular;
+  final double rating;
+  final int reviewCount;
+  final int purchaseCount;
   final List<LikeCardDenomination> denominations;
 
   const LikeCardProduct({
@@ -67,23 +74,28 @@ class LikeCardProduct {
     required this.categoryId,
     required this.nameEn,
     required this.nameAr,
-    required this.colorHex,
     required this.initial,
     this.imageUrl,
     this.descEn,
     this.descAr,
+    this.activationInstructionsEn,
+    this.activationInstructionsAr,
     this.isPopular = false,
+    this.rating = 0.0,
+    this.reviewCount = 0,
+    this.purchaseCount = 0,
     required this.denominations,
   });
 
-  /// Parsed brand color — keeps existing page code working unchanged.
-  Color get brandColor => _hexToColor(colorHex);
+  Color get brandColor => _colorFromInitial(initial);
 
-  double get minPriceSDG =>
-      denominations.map((d) => d.priceSDG).reduce((a, b) => a < b ? a : b);
+  double get minPriceSDG => denominations.isEmpty
+      ? 0
+      : denominations.map((d) => d.priceSDG).reduce((a, b) => a < b ? a : b);
 
-  double get maxPriceSDG =>
-      denominations.map((d) => d.priceSDG).reduce((a, b) => a > b ? a : b);
+  double get maxPriceSDG => denominations.isEmpty
+      ? 0
+      : denominations.map((d) => d.priceSDG).reduce((a, b) => a > b ? a : b);
 
   factory LikeCardProduct.fromJson(Map<String, dynamic> json) {
     return LikeCardProduct(
@@ -91,15 +103,46 @@ class LikeCardProduct {
       categoryId: json['categoryId'] as String,
       nameEn: json['nameEn'] as String,
       nameAr: json['nameAr'] as String,
-      colorHex: json['colorHex'] as String? ?? '#006BFF',
       initial: json['initial'] as String? ?? '?',
       imageUrl: json['imageUrl'] as String?,
       descEn: json['descEn'] as String?,
       descAr: json['descAr'] as String?,
+      activationInstructionsEn: json['activationInstructionsEn'] as String?,
+      activationInstructionsAr: json['activationInstructionsAr'] as String?,
       isPopular: json['popular'] as bool? ?? false,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
+      purchaseCount: (json['purchaseCount'] as num?)?.toInt() ?? 0,
       denominations: (json['denominations'] as List? ?? [])
           .map((e) => LikeCardDenomination.fromJson(e as Map<String, dynamic>))
           .toList(),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gift Card Review
+// ─────────────────────────────────────────────────────────────────────────────
+
+class GiftCardReview {
+  final String authorName;
+  final double rating;
+  final String comment;
+  final String date;
+
+  const GiftCardReview({
+    required this.authorName,
+    required this.rating,
+    required this.comment,
+    required this.date,
+  });
+
+  factory GiftCardReview.fromJson(Map<String, dynamic> json) {
+    return GiftCardReview(
+      authorName: json['authorName'] as String? ?? 'Anonymous',
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      comment: json['comment'] as String? ?? '',
+      date: json['date'] as String? ?? '',
     );
   }
 }
@@ -138,7 +181,6 @@ class LikeCardOrder {
   final String productNameEn;
   final String productNameAr;
   final String productInitial;
-  final String productColorHex;
   final String? productImageUrl;
   final String categoryId;
   final String denominationLabel;
@@ -154,7 +196,6 @@ class LikeCardOrder {
     required this.productNameEn,
     required this.productNameAr,
     required this.productInitial,
-    required this.productColorHex,
     this.productImageUrl,
     required this.categoryId,
     required this.denominationLabel,
@@ -165,7 +206,7 @@ class LikeCardOrder {
     this.createdAt,
   });
 
-  Color get productColor => _hexToColor(productColorHex);
+  Color get productColor => _colorFromInitial(productInitial);
 
   factory LikeCardOrder.fromJson(Map<String, dynamic> json) {
     return LikeCardOrder(
@@ -174,7 +215,6 @@ class LikeCardOrder {
       productNameEn: json['productNameEn'] as String,
       productNameAr: json['productNameAr'] as String,
       productInitial: json['productInitial'] as String? ?? '?',
-      productColorHex: json['productColorHex'] as String? ?? '#006BFF',
       productImageUrl: json['productImageUrl'] as String?,
       categoryId: json['categoryId'] as String? ?? '',
       denominationLabel: json['denominationLabel'] as String,

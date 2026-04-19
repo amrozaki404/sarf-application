@@ -340,11 +340,11 @@ class AppHttpClient {
           final refreshed = await _tryRefreshToken();
           if (refreshed) return true; // signal caller to retry
         }
-        debugPrint('[AppHttpClient] 401 → logout');
+        debugPrint('[AppHttpClient] 401 → session expired');
         await _storage.delete(key: AppConstants.tokenKey);
         await _storage.delete(key: AppConstants.refreshTokenKey);
         await _storage.delete(key: AppConstants.userKey);
-        NavigationService.goToLogin();
+        NavigationService.showSessionExpiredDialog();
       }
     } else if (response.statusCode == 422 && showValidationDialog) {
       try {

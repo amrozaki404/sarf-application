@@ -64,9 +64,8 @@ class _AppButtonState extends State<AppButton>
           width: double.infinity,
           padding: widget.padding,
           decoration: BoxDecoration(
-            gradient: disabled
-                ? AppGradients.disabledButton
-                : AppGradients.exchangeButton,
+            color: disabled ? null : AppColors.primary,
+            gradient: disabled ? AppGradients.disabledButton : null,
             borderRadius: widget.borderRadius,
             boxShadow: disabled ? const [] : AppShadows.button,
           ),

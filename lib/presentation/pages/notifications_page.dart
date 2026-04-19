@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../data/models/auth_models.dart';
 import '../../data/models/notification_models.dart';
-import '../../data/services/auth_service.dart';
 import '../../data/services/notification_service.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -25,7 +23,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     end: Alignment.centerRight,
   );
 
-  AuthData? _user;
   _NotificationViewTab _selectedTab = _NotificationViewTab.unread;
   List<AppNotification> _notifications = [];
   bool _loading = true;
@@ -43,14 +40,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
     _loadNotifications();
-  }
-
-  Future<void> _loadUser() async {
-    final user = await AuthService.getUser();
-    if (!mounted) return;
-    setState(() => _user = user);
   }
 
   Future<void> _loadNotifications() async {
@@ -208,25 +198,35 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = _user?.firstName.trim();
-    final displayName = (firstName == null || firstName.isEmpty)
-        ? _t('Guest', 'المستخدم')
-        : firstName;
-    final avatarText = displayName[0].toUpperCase();
     final notifications = _filteredNotifications;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
-                children: [
-                  _buildTopBar(avatarText),
-                  const SizedBox(height: 14),
-                  _buildViewTabs(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          _t('Notifications', 'الإشعارات'),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
+              children: [
+                _buildViewTabs(
                     unreadCount: _unreadCount,
                     readCount: _readCount,
                   ),
@@ -271,45 +271,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     }),
                 ],
               ),
-      ),
     );
   }
 
-  Widget _buildTopBar(String avatarText) {
-    final canPop = Navigator.of(context).canPop();
-    final leadingIcon = _isArabic
-        ? Icons.arrow_forward_ios_rounded
-        : Icons.arrow_back_ios_new_rounded;
-
-    return SizedBox(
-      height: 64,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: _TopCircleButton(
-              icon: canPop ? leadingIcon : Icons.notifications_none_rounded,
-              onTap: canPop ? () => Navigator.of(context).pop() : null,
-              foreground: const Color(0xFF6E7688),
-              background: Colors.white,
-              borderColor: _surfaceBorder,
-            ),
-          ),
-          const Center(child: _BrandMark()),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: _TopCircleButton(
-              label: avatarText,
-              foreground: Colors.white,
-              background: const Color(0xFF0C2C5E),
-              borderColor: Colors.transparent,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildViewTabs({
     required int unreadCount,
@@ -552,103 +516,3 @@ class _DetailChip extends StatelessWidget {
   }
 }
 
-class _TopCircleButton extends StatelessWidget {
-  final IconData? icon;
-  final String? label;
-  final Color foreground;
-  final Color background;
-  final Color borderColor;
-  final VoidCallback? onTap;
-
-  const _TopCircleButton({
-    this.icon,
-    this.label,
-    required this.foreground,
-    required this.background,
-    required this.borderColor,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: background,
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor),
-      ),
-      alignment: Alignment.center,
-      child: icon != null
-          ? Icon(icon, color: foreground, size: 22)
-          : Text(
-              label ?? '',
-              style: TextStyle(
-                color: foreground,
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
-            ),
-    );
-
-    if (onTap == null) {
-      return child;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _BrandMark extends StatelessWidget {
-  const _BrandMark();
-
-  @override
-  Widget build(BuildContext context) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-      children: [
-        Image.asset(
-          'assets/images/app_icon.png',
-          width: 36,
-          height: 36,
-        ),
-        const SizedBox(width: 10),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isArabic ? 'صرف' : 'Sarf',
-              style: const TextStyle(
-                color: Color(0xFF101828),
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Exchange',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.1,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
